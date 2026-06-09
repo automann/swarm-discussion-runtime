@@ -1,0 +1,8 @@
+{
+  "status": {
+    "agent-c": {
+      "completed": "{\"name\":\"maintainer\",\"token\":\"tok-maintainer\",\"claim\":\"Adopt the formatter, then document the migration.\"}"
+    }
+  },
+  "timed_out": false
+}

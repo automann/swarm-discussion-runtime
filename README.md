@@ -18,7 +18,8 @@ portable evidence.
 
 ## Current Status
 
-Skeleton only.
+Phase 1 runtime primitives are underway. The skeleton CLI now includes
+fan-in merge and artifact validation helpers.
 
 The first milestone is not feature parity. It is proving the smallest runtime
 pipeline:
@@ -57,6 +58,9 @@ references/               source-plan and legacy-reference notes
 ```bash
 python3 runtime/swarm_rt.py health
 python3 runtime/swarm_rt.py planned-commands
+python3 runtime/swarm_rt.py collect-merge --spawn-order fixtures/phase1/spawn-order.json --wait-result fixtures/phase1/wait-partial-1.json --wait-result fixtures/phase1/wait-partial-2.json
+python3 runtime/swarm_rt.py validate-round fixtures/phase1/discussions/complete/rounds/001.json
+python3 runtime/swarm_rt.py validate-discussion fixtures/phase1/discussions/complete
 python3 -m pytest
 ```
 

@@ -1,0 +1,85 @@
+{
+  "roundId": 1,
+  "topic": "Tabs vs spaces",
+  "mode": "lightweight",
+  "timestamp": "2026-06-09T00:00:00Z",
+  "messages": [
+    {
+      "id": "r1-msg-001",
+      "from": "architect",
+      "type": "position_declaration",
+      "content": {
+        "summary": "Let the project formatter define whitespace."
+      },
+      "references": []
+    },
+    {
+      "id": "r1-msg-002",
+      "from": "contrarian",
+      "type": "argument",
+      "content": {
+        "summary": "Respect local history before normalizing style."
+      },
+      "references": [
+        {
+          "targetId": "r1-msg-001",
+          "relation": "questions"
+        }
+      ]
+    },
+    {
+      "id": "r1-msg-003",
+      "from": "maintainer",
+      "type": "response",
+      "content": {
+        "summary": "Adopt the formatter, then document the migration."
+      },
+      "references": [
+        {
+          "targetId": "r1-msg-001",
+          "relation": "extends"
+        },
+        {
+          "targetId": "r1-msg-002",
+          "relation": "supports"
+        }
+      ]
+    }
+  ],
+  "argumentGraph": [
+    {
+      "from": "r1-msg-002",
+      "to": "r1-msg-001",
+      "relation": "questions"
+    },
+    {
+      "from": "r1-msg-003",
+      "to": "r1-msg-001",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-003",
+      "to": "r1-msg-002",
+      "relation": "supports"
+    }
+  ],
+  "positionShifts": [],
+  "synthesis": {
+    "recommendation": "Use formatter-defined whitespace and document the migration."
+  },
+  "metadata": {
+    "messageCount": 3,
+    "participants": [
+      "architect",
+      "contrarian",
+      "maintainer"
+    ],
+    "referenceCount": 3
+  },
+  "personaContextLog": {
+    "maintainer": {
+      "r1-msg-001": "full",
+      "r1-msg-002": "full"
+    }
+  }
+}

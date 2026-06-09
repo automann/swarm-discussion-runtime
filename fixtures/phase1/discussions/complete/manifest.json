@@ -1,0 +1,13 @@
+{
+  "id": "tabs-vs-spaces",
+  "title": "Tabs vs spaces",
+  "mode": "lightweight",
+  "schemaVersion": 2,
+  "status": "completed",
+  "currentRound": 1,
+  "personas": [
+    "architect",
+    "contrarian",
+    "maintainer"
+  ]
+}

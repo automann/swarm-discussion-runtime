@@ -1,0 +1,17 @@
+[
+  {
+    "agentId": "agent-b",
+    "persona": "architect",
+    "token": "tok-architect"
+  },
+  {
+    "agentId": "agent-a",
+    "persona": "contrarian",
+    "token": "tok-contrarian"
+  },
+  {
+    "agentId": "agent-c",
+    "persona": "maintainer",
+    "token": "tok-maintainer"
+  }
+]

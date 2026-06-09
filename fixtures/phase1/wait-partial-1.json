@@ -1,0 +1,11 @@
+{
+  "status": {
+    "agent-a": {
+      "completed": "{\"name\":\"contrarian\",\"token\":\"tok-contrarian\",\"claim\":\"Respect local history before normalizing style.\"}"
+    },
+    "agent-b": {
+      "completed": "{\"name\":\"architect\",\"token\":\"tok-architect\",\"claim\":\"Let the project formatter define whitespace.\"}"
+    }
+  },
+  "timed_out": false
+}
