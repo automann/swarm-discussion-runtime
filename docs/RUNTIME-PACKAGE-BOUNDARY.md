@@ -33,7 +33,8 @@ Host adapter owns:
 
 - Spawning host agents.
 - Waiting for host results.
-- Persisting `host-step.json`, `spawn-order.json`, and `wait-batches.jsonl`.
+- Calling `transport-init`, `transport-append-batch`, and `transport-collect`
+  with host-produced ids and wait batches.
 - Calling runtime gates such as `validate-host-step`, `adapter-smoke`, and
   `validate-loop`.
 
@@ -43,7 +44,7 @@ mutate WAL state, or decide audit health.
 Runtime owns:
 
 - Context summaries and prompt-build artifacts.
-- Fan-in merge and host transport validation.
+- Transport artifact writes, fan-in merge, and host transport validation.
 - WAL mutation, checkpointing, and finalization.
 - Directory, round, capability, trace, evidence, adapter smoke, and loop
   validation.
@@ -60,6 +61,9 @@ The stable plugin-facing commands are listed in `runtime-contract.json` under
 context-build
 prompt-build
 collect-merge
+transport-init
+transport-append-batch
+transport-collect
 append-message
 checkpoint
 finalize-round
@@ -72,14 +76,16 @@ validate-loop
 
 Additional stable helpers such as `runtime-contract`, `resume-plan`,
 `validate-round`, `validate-discussion`, and `capability-doctor` are also part of
-the manifest.
+the manifest. `collect-merge` remains the pure merge primitive; plugin flows
+should prefer `transport-collect` when they want the standard
+`collect-result.json` artifact written.
 
 ## Integration Gates
 
 The plugin should treat these commands as gates:
 
-- `validate-host-step`: after writing `host-step.json`.
-- `adapter-smoke`: after writing transport artifacts and `collect-result.json`.
+- `validate-host-step`: after `transport-init`.
+- `adapter-smoke`: after `transport-collect`.
 - `validate-loop`: before accepting a completed fixture or live discussion as a
   minimal complete loop.
 

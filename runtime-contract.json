@@ -38,6 +38,34 @@
       "adapterFacing": true,
       "mutatesState": false,
       "responsibilities": ["fan-in-merge"],
+      "produces": []
+    },
+    "transport-init": {
+      "owner": "runtime",
+      "stability": "contract",
+      "adapterFacing": true,
+      "mutatesState": true,
+      "responsibilities": ["transport-step-initialization", "spawn-order-persistence", "host-step-persistence"],
+      "produces": [
+        "transport/r<round>/<phase>/host-step.json",
+        "transport/r<round>/<phase>/spawn-order.json",
+        "transport/r<round>/<phase>/wait-batches.jsonl"
+      ]
+    },
+    "transport-append-batch": {
+      "owner": "runtime",
+      "stability": "contract",
+      "adapterFacing": true,
+      "mutatesState": true,
+      "responsibilities": ["wait-batch-persistence"],
+      "produces": ["transport/r<round>/<phase>/wait-batches.jsonl"]
+    },
+    "transport-collect": {
+      "owner": "runtime",
+      "stability": "contract",
+      "adapterFacing": true,
+      "mutatesState": true,
+      "responsibilities": ["fan-in-merge", "collect-result-persistence"],
       "produces": ["transport/r<round>/<phase>/collect-result.json"]
     },
     "append-message": {
@@ -140,6 +168,9 @@
   "adapterFacingCommands": [
     "runtime-contract",
     "collect-merge",
+    "transport-init",
+    "transport-append-batch",
+    "transport-collect",
     "trace",
     "evidence",
     "validate-host-step",
@@ -173,9 +204,9 @@
       "responsibilities": [
         "spawn-host-agents",
         "wait-host-agents",
-        "persist-host-step",
-        "persist-spawn-order",
-        "persist-wait-batches",
+        "call-transport-init",
+        "call-transport-append-batch",
+        "call-transport-collect",
         "call-runtime-gates"
       ],
       "forbidden": [
@@ -192,6 +223,7 @@
         "context-summary",
         "prompt-build",
         "fan-in-merge",
+        "transport-artifact-writing",
         "message-id-minting",
         "wal-mutation",
         "wal-checkpoint",
@@ -230,22 +262,22 @@
     },
     {
       "path": "transport/r<round>/<phase>/host-step.json",
-      "producer": "hostAdapter",
-      "consumers": ["validate-host-step", "adapter-smoke", "validate-loop"]
+      "producer": "transport-init",
+      "consumers": ["transport-collect", "validate-host-step", "adapter-smoke", "validate-loop"]
     },
     {
       "path": "transport/r<round>/<phase>/spawn-order.json",
-      "producer": "hostAdapter",
-      "consumers": ["collect-merge", "adapter-smoke", "trace", "evidence"]
+      "producer": "transport-init",
+      "consumers": ["collect-merge", "transport-collect", "adapter-smoke", "trace", "evidence"]
     },
     {
       "path": "transport/r<round>/<phase>/wait-batches.jsonl",
-      "producer": "hostAdapter",
-      "consumers": ["collect-merge", "adapter-smoke", "trace", "evidence"]
+      "producer": "transport-append-batch",
+      "consumers": ["collect-merge", "transport-collect", "adapter-smoke", "trace", "evidence"]
     },
     {
       "path": "transport/r<round>/<phase>/collect-result.json",
-      "producer": "collect-merge",
+      "producer": "transport-collect",
       "consumers": ["adapter-smoke", "trace", "evidence", "validate-loop"]
     },
     {

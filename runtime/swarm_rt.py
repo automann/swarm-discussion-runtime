@@ -23,6 +23,7 @@ from swarm.context import build_context_summary
 from swarm.loop import validate_minimal_loop
 from swarm.prompt import build_prompt
 from swarm.smoke import adapter_smoke
+from swarm.transport import append_wait_batch, collect_transport_step, write_transport_step
 from swarm.validation import validate_discussion_dir, validate_round_file
 from swarm.wal import append_message, checkpoint, finalize_round, resume_plan
 
@@ -152,6 +153,33 @@ def cmd_validate_host_step(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_transport_init(args: argparse.Namespace) -> int:
+    result = write_transport_step(
+        args.dir,
+        args.host,
+        args.discussion_id,
+        args.round,
+        args.phase,
+        load_json(args.spawn_order),
+        brief_path=args.brief_path,
+        command_prefix=args.command_prefix,
+    )
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
+def cmd_transport_append_batch(args: argparse.Namespace) -> int:
+    result = append_wait_batch(args.dir, args.round, args.phase, load_json(args.wait_result))
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
+def cmd_transport_collect(args: argparse.Namespace) -> int:
+    result = collect_transport_step(args.dir, args.round, args.phase)
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
 def cmd_capability_doctor(args: argparse.Namespace) -> int:
     profile_path = args.profile or default_profile_path()
     profile = load_profile_json(profile_path)
@@ -270,6 +298,39 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate_host_step.add_argument("host_step", type=Path)
     validate_host_step.set_defaults(func=cmd_validate_host_step)
+
+    transport_init = sub.add_parser(
+        "transport-init",
+        help="Write spawn-order and host-step artifacts for one host adapter step",
+    )
+    transport_init.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    transport_init.add_argument("--host", required=True, choices=["codex", "claude"], help="Host adapter name")
+    transport_init.add_argument("--discussion-id", required=True, help="Discussion id")
+    transport_init.add_argument("--round", type=int, required=True, help="Round number")
+    transport_init.add_argument("--phase", required=True, help="Phase name")
+    transport_init.add_argument("--spawn-order", type=Path, required=True, help="JSON spawn-order list")
+    transport_init.add_argument("--brief-path", default="context/summary.md", help="Brief path recorded in parent context")
+    transport_init.add_argument("--command-prefix", default="swarm-rt", help="Runtime command prefix for metadata")
+    transport_init.set_defaults(func=cmd_transport_init)
+
+    transport_append = sub.add_parser(
+        "transport-append-batch",
+        help="Append one raw wait-result batch to wait-batches.jsonl",
+    )
+    transport_append.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    transport_append.add_argument("--round", type=int, required=True, help="Round number")
+    transport_append.add_argument("--phase", required=True, help="Phase name")
+    transport_append.add_argument("--wait-result", type=Path, required=True, help="JSON wait-result batch")
+    transport_append.set_defaults(func=cmd_transport_append_batch)
+
+    transport_collect = sub.add_parser(
+        "transport-collect",
+        help="Run collect-merge from transport artifacts and write collect-result.json",
+    )
+    transport_collect.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    transport_collect.add_argument("--round", type=int, required=True, help="Round number")
+    transport_collect.add_argument("--phase", required=True, help="Phase name")
+    transport_collect.set_defaults(func=cmd_transport_collect)
 
     capability = sub.add_parser(
         "capability-doctor",

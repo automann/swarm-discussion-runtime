@@ -340,3 +340,28 @@ Use this shape for every future implementation round:
   should prevent future skill-prompt drift during integration.
 - Next: Use this contract to prototype the published plugin-side wrapper that
   invokes the runtime CLI against the minimal v2 fixture.
+
+## 2026-06-10 - Runtime-Owned Transport Artifacts
+
+- Commit: this commit.
+- Roadmap alignment: Adapter/plugin migration follow-through. This removes
+  another manual parent-agent responsibility by making the runtime own the
+  transport artifact package around host spawn/wait primitives.
+- Work summary: Added `transport-init`, `transport-append-batch`, and
+  `transport-collect` as stable runtime commands. The helpers write
+  `host-step.json`, `spawn-order.json`, `wait-batches.jsonl`, and
+  `collect-result.json` through validated, runtime-owned paths while preserving
+  host responsibility for actual spawn and wait operations.
+- Verification: targeted transport and runtime-contract tests passed; full
+  suite should be run after vendoring into the Codex plugin.
+- Failure coverage: Added tests for empty spawn order, path traversal phases,
+  append-before-init, non-object wait batches, missing transport artifacts, and
+  incomplete fan-in that still writes a diagnostic `collect-result.json`.
+- AgenTeam review: This keeps the executor facade thin in the same spirit as
+  AgenTeam: the host provides ids and raw batches, while the runtime owns the
+  durable artifact protocol and validation surface. It does not add runtime
+  spawning or waiting.
+- Drift status: ON TRACK. The contract now names transport artifact helpers, so
+  plugin prompts have less room to reintroduce ad hoc JSON handling.
+- Next: Vendor these runtime changes into the Codex plugin wrapper and replace
+  skill instructions that ask the parent agent to write transport files by hand.
