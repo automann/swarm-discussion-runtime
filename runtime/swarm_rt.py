@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm import __version__, planned_commands
+from swarm.audit import build_evidence, build_trace
 from swarm.collect import collect_merge
 from swarm.context import build_context_summary
 from swarm.prompt import build_prompt
@@ -101,6 +102,21 @@ def cmd_resume_plan(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_trace(args: argparse.Namespace) -> int:
+    result = build_trace(args.dir)
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
+def cmd_evidence(args: argparse.Namespace) -> int:
+    result = build_evidence(args.dir)
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
 def cmd_validate_round(args: argparse.Namespace) -> int:
     result = validate_round_file(args.round_path)
     emit(result)
@@ -170,6 +186,15 @@ def build_parser() -> argparse.ArgumentParser:
     resume = sub.add_parser("resume-plan", help="Describe how to resume from WAL state")
     resume.add_argument("--dir", type=Path, required=True, help="Discussion directory")
     resume.set_defaults(func=cmd_resume_plan)
+
+    trace = sub.add_parser("trace", help="Build a diagnostic discussion artifact trace")
+    trace.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    trace.set_defaults(func=cmd_trace)
+
+    evidence = sub.add_parser("evidence", help="Build portable discussion evidence")
+    evidence.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    evidence.add_argument("--output", type=Path, help="Optional evidence JSON output path")
+    evidence.set_defaults(func=cmd_evidence)
 
     validate_round = sub.add_parser("validate-round", help="Validate one committed round JSON file")
     validate_round.add_argument("round_path", type=Path)

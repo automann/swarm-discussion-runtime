@@ -73,8 +73,9 @@ swarm-rt trace
 swarm-rt evidence
 ```
 
-Only `health` and `planned-commands` exist in the skeleton. Other commands must
-be added behind tests and fixtures.
+Commands are added behind tests and fixtures. `init`, `persona-plan`, and
+future host-adapter commands remain planned until their runtime contracts are
+proven.
 
 ## Artifact Shape
 

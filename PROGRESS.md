@@ -154,3 +154,29 @@ Use this shape for every future implementation round:
   instead of carrying those mechanics in conversation context.
 - Next: Phase 4 trace/evidence should consume the prompt, collect, WAL,
   validation, and event artifacts created so far.
+
+## 2026-06-09 - Phase 4 Trace And Evidence
+
+- Commit: this commit.
+- Roadmap alignment: Phase 4 deliverables: `trace`, `evidence`, artifact
+  summary schema, and smoke audit checklist.
+- Work summary: Added `runtime/swarm/audit.py`, CLI commands for `trace` and
+  `evidence`, portable `schemas/evidence.schema.json`, and
+  `SMOKE-AUDIT-CHECKLIST.md`. Trace now summarizes validation, prompts,
+  transport, WAL/resume, events, quality, artifacts, health, and next action.
+  Evidence projects the same local artifacts into a portable audit record.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests for missing discussion directories, validation
+  failures, incomplete transport collect results, resumable partial WAL state,
+  and evidence file-output parity.
+- AgenTeam review: Follows AgenTeam's trace/evidence design closely at the
+  discipline level: derive diagnostic health and next action from local state
+  and events, then project a versioned portable evidence record that references
+  artifact paths. It avoids AgenTeam's run/stage/role model and keeps the
+  discussion-specific summaries focused on transport, prompts, validation, WAL,
+  and quality.
+- Drift status: ON TRACK. Phase 4 completes the first artifact-first audit loop
+  without requiring raw host session logs.
+- Next: Phase 5 Thin Host Adapter should document how Codex and Claude hosts
+  call these runtime primitives with parent context limited to brief, phase,
+  agent ids, and next helper command.

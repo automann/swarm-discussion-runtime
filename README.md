@@ -37,6 +37,7 @@ ROADMAP.md                staged implementation plan
 PROGRESS.md               per-round roadmap alignment and drift review ledger
 ACCEPTANCE.md             proof points and falsifiers
 NON_GOALS.md              explicit exclusions
+SMOKE-AUDIT-CHECKLIST.md  trace/evidence review checklist
 runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
 tests/                    contract and smoke tests
@@ -64,6 +65,8 @@ python3 runtime/swarm_rt.py context-build --brief fixtures/phase2/brief.json --o
 python3 runtime/swarm_rt.py prompt-build --request fixtures/phase2/prompt-requests/response.json --out-dir /tmp/swarm-prompt
 python3 runtime/swarm_rt.py collect-merge --spawn-order fixtures/phase1/spawn-order.json --wait-result fixtures/phase1/wait-partial-1.json --wait-result fixtures/phase1/wait-partial-2.json
 python3 runtime/swarm_rt.py resume-plan --dir fixtures/phase1/discussions/complete
+python3 runtime/swarm_rt.py trace --dir fixtures/phase1/discussions/complete
+python3 runtime/swarm_rt.py evidence --dir fixtures/phase1/discussions/complete --output /tmp/swarm-evidence.json
 python3 runtime/swarm_rt.py validate-round fixtures/phase1/discussions/complete/rounds/001.json
 python3 runtime/swarm_rt.py validate-discussion fixtures/phase1/discussions/complete
 python3 -m pytest
