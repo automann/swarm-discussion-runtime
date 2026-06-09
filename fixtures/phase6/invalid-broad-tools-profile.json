@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "swarm.capability_profile",
+  "id": "expert-dangerous",
+  "title": "Invalid ordinary expert with broad tools",
+  "role": "ordinary-expert",
+  "default": false,
+  "status": "invalid-fixture",
+  "allowedTools": ["read", "bash", "edit", "write"],
+  "toolEvidencePolicy": {
+    "requiresLoggedToolCall": true,
+    "requiresValidation": true,
+    "citation": "fixture should fail"
+  }
+}

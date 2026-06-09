@@ -11,6 +11,12 @@ from typing import Any
 from swarm import __version__, planned_commands
 from swarm.adapter import validate_host_transport_metadata
 from swarm.audit import build_evidence, build_trace
+from swarm.capabilities import (
+    capability_doctor_report,
+    default_profile_path,
+    load_jsonl,
+    load_json as load_profile_json,
+)
 from swarm.collect import collect_merge
 from swarm.context import build_context_summary
 from swarm.prompt import build_prompt
@@ -136,6 +142,23 @@ def cmd_validate_host_step(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_capability_doctor(args: argparse.Namespace) -> int:
+    profile_path = args.profile or default_profile_path()
+    profile = load_profile_json(profile_path)
+    records = None
+    evidence_base_dir = None
+    errors: list[dict[str, Any]] = []
+    if args.tool_evidence:
+        records, errors = load_jsonl(args.tool_evidence)
+        evidence_base_dir = args.tool_evidence.parent
+    result = capability_doctor_report(profile, records, tool_evidence_base_dir=evidence_base_dir)
+    if errors:
+        result["ok"] = False
+        result["errors"] = [*errors, *result["errors"]]
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
 def cmd_validate_round(args: argparse.Namespace) -> int:
     result = validate_round_file(args.round_path)
     emit(result)
@@ -221,6 +244,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate_host_step.add_argument("host_step", type=Path)
     validate_host_step.set_defaults(func=cmd_validate_host_step)
+
+    capability = sub.add_parser(
+        "capability-doctor",
+        help="Report effective expert capability profile and evidence citation status",
+    )
+    capability.add_argument("--profile", type=Path, help="Capability profile JSON path")
+    capability.add_argument("--tool-evidence", type=Path, help="Optional tool-evidence JSONL path")
+    capability.set_defaults(func=cmd_capability_doctor)
 
     validate_round = sub.add_parser("validate-round", help="Validate one committed round JSON file")
     validate_round.add_argument("round_path", type=Path)

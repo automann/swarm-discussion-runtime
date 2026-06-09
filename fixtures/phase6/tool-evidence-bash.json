@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "swarm.tool_evidence",
+  "agentId": "agent-b",
+  "profileId": "expert-readonly",
+  "tool": "bash",
+  "artifactPath": "artifacts/bash-001.json",
+  "summary": "Attempted to cite shell output.",
+  "validated": true,
+  "validation": {
+    "ok": true,
+    "validator": "fixture"
+  }
+}

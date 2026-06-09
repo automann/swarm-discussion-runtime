@@ -210,3 +210,33 @@ Use this shape for every future implementation round:
 - Next: Phase 6 should add capability profile contracts, preserve no-tools
   expert defaults, and prepare future readonly executor notes without granting
   broad expert tools prematurely.
+
+## 2026-06-09 - Phase 6 Capability Profiles
+
+- Commit: this commit.
+- Roadmap alignment: Phase 6 deliverables: preserved `expert-basic`,
+  optional readonly profile spec, doctor/report for effective capability
+  profile, and research notes for future coordinator/executor adapters.
+- Work summary: Added `profiles/expert-basic.json`,
+  `profiles/expert-readonly.json`, capability and tool-evidence schemas,
+  `runtime/swarm/capabilities.py`, the `capability-doctor` CLI command,
+  fixtures for valid and invalid tool evidence, and docs for capability
+  profiles plus future executors. `expert-basic` remains the default and grants
+  no tools.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests rejecting default profile tool grants, broad
+  tools on ordinary experts, unvalidated tool evidence, and tool evidence for
+  disallowed tools, mismatched profiles, or missing artifacts. The doctor
+  reports tool-derived evidence as non-citable unless it is logged, validated,
+  allowed by the active profile, tied to that profile, and backed by an artifact
+  path.
+- AgenTeam review: This follows AgenTeam's effective-profile and
+  artifact-evidence discipline: resolve and report a small effective
+  configuration, reference artifacts by path, and keep runner/executor power out
+  of the default path. It does not adopt AgenTeam's write scopes or branch
+  isolation yet because ordinary swarm experts still have no broad tools.
+- Drift status: ON TRACK. Phase 6 adds autonomy scaffolding without enabling
+  autonomy by default.
+- Next: Start the next roadmap slice by wiring trace/evidence to surface
+  capability profile summaries from real discussion directories, then use a
+  smoke fixture to verify the end-to-end audit view.

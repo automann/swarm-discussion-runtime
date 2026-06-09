@@ -1,0 +1,1 @@
+{"schemaVersion":1,"kind":"swarm.tool_evidence","agentId":"agent-b","profileId":"expert-readonly","tool":"read","artifactPath":"artifacts/read-001.json","summary":"Read README repository map.","validated":false,"validation":{"ok":false,"validator":"none"}}

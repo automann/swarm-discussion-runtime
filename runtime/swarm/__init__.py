@@ -27,4 +27,5 @@ def planned_commands() -> list[str]:
         "trace",
         "evidence",
         "validate-host-step",
+        "capability-doctor",
     ]

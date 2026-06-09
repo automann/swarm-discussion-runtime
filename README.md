@@ -18,9 +18,9 @@ portable evidence.
 
 ## Current Status
 
-Phase 5 runtime primitives are underway. The CLI now includes fan-in merge,
+Phase 6 runtime primitives are underway. The CLI now includes fan-in merge,
 artifact validation, context summary, prompt-build helpers, WAL helpers,
-trace/evidence, and thin host-step validation.
+trace/evidence, thin host-step validation, and capability profile reports.
 
 The first milestone is not feature parity. It is proving the smallest runtime
 pipeline:
@@ -40,6 +40,9 @@ ACCEPTANCE.md             proof points and falsifiers
 NON_GOALS.md              explicit exclusions
 SMOKE-AUDIT-CHECKLIST.md  trace/evidence review checklist
 docs/HOST-ADAPTERS.md     Codex and Claude thin host-adapter recipes
+docs/CAPABILITY-PROFILES.md expert capability profile contract
+docs/FUTURE-EXECUTORS.md  coordinator/executor research notes
+profiles/                 built-in expert capability profiles
 runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
 tests/                    contract and smoke tests
@@ -70,6 +73,7 @@ python3 runtime/swarm_rt.py resume-plan --dir fixtures/phase1/discussions/comple
 python3 runtime/swarm_rt.py trace --dir fixtures/phase1/discussions/complete
 python3 runtime/swarm_rt.py evidence --dir fixtures/phase1/discussions/complete --output /tmp/swarm-evidence.json
 python3 runtime/swarm_rt.py validate-host-step fixtures/phase5/codex-host-step.json
+python3 runtime/swarm_rt.py capability-doctor
 python3 runtime/swarm_rt.py validate-round fixtures/phase1/discussions/complete/rounds/001.json
 python3 runtime/swarm_rt.py validate-discussion fixtures/phase1/discussions/complete
 python3 -m pytest
