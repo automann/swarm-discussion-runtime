@@ -34,6 +34,7 @@ brief -> prompt-build -> collect-merge -> WAL -> validate -> trace/evidence
 AGENTS.md                 agent operating contract for this incubator
 ARCHITECTURE.md           target model and responsibility split
 ROADMAP.md                staged implementation plan
+PROGRESS.md               per-round roadmap alignment and drift review ledger
 ACCEPTANCE.md             proof points and falsifiers
 NON_GOALS.md              explicit exclusions
 runtime/swarm_rt.py       minimal CLI entrypoint

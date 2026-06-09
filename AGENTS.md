@@ -35,6 +35,16 @@ purpose.
 - Design failure tests alongside passing tests; bad inputs, partial artifacts,
   stale state, ambiguous transport results, and invalid provenance must fail
   loudly with stable machine-readable error codes.
+- Before each substantial task, read `ROADMAP.md`, `ACCEPTANCE.md`, and
+  `PROGRESS.md` to recover intent and avoid re-inventing the target.
+- After each implementation round, update `PROGRESS.md` before committing.
+  Record roadmap alignment, verification, failure coverage, AgenTeam review,
+  drift status, and the next task.
+- After implementing a round, review the work against
+  `/Users/syfq/dev/harness/codex-agenteam` design discipline: artifact-first
+  runtime state, progress snapshots, trace/evidence, scope containment, and
+  explicit design-drift review. Adopt the discipline, not the full AgenTeam role
+  pipeline.
 
 ## First Proof Point
 
