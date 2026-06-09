@@ -1,0 +1,28 @@
+"""swarm-discussion runtime incubator package."""
+
+from __future__ import annotations
+
+__version__ = "0.0.0"
+
+
+def planned_commands() -> list[str]:
+    """Return the planned runtime command surface.
+
+    Only a small subset exists in the skeleton. Keeping the target command list
+    executable makes drift obvious as implementation begins.
+    """
+    return [
+        "health",
+        "init",
+        "context-build",
+        "persona-plan",
+        "prompt-build",
+        "collect-merge",
+        "append-message",
+        "checkpoint",
+        "finalize-round",
+        "validate-round",
+        "validate-discussion",
+        "trace",
+        "evidence",
+    ]
