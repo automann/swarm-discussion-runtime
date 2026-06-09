@@ -316,3 +316,27 @@ Use this shape for every future implementation round:
 - Next: Define the runtime/plugin package boundary so the published
   `swarm-discussion` plugin can call these primitives without copying runtime
   logic back into skill text.
+
+## 2026-06-09 - Runtime Plugin Contract
+
+- Commit: this commit.
+- Roadmap alignment: Runtime/plugin package boundary after adapter smoke. This
+  makes the plugin integration surface explicit before migration back to the
+  published `swarm-discussion` line.
+- Work summary: Added `runtime-contract.json`,
+  `schemas/runtime-contract.schema.json`, `runtime-contract` CLI validation,
+  `runtime/swarm/contract.py`, and `docs/RUNTIME-PACKAGE-BOUNDARY.md`. The
+  contract identifies stable runtime-owned commands, adapter-facing commands,
+  integration gates, boundary responsibilities, forbidden runtime
+  responsibilities, and stable artifact paths.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests rejecting missing adapter gates, host-owned
+  stable commands, and host responsibilities leaking into runtime.
+- AgenTeam review: This follows AgenTeam's config/validation pattern: publish a
+  manifest, validate it with runtime code, and keep executor/host behavior
+  outside the command contract. It does not add an executor facade or mutate
+  discussion state.
+- Drift status: ON TRACK. The plugin boundary is now machine-readable, which
+  should prevent future skill-prompt drift during integration.
+- Next: Use this contract to prototype the published plugin-side wrapper that
+  invokes the runtime CLI against the minimal v2 fixture.

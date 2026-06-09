@@ -42,9 +42,11 @@ ACCEPTANCE.md             proof points and falsifiers
 NON_GOALS.md              explicit exclusions
 SMOKE-AUDIT-CHECKLIST.md  trace/evidence review checklist
 docs/HOST-ADAPTERS.md     Codex and Claude thin host-adapter recipes
+docs/RUNTIME-PACKAGE-BOUNDARY.md runtime/plugin ownership contract
 docs/CAPABILITY-PROFILES.md expert capability profile contract
 docs/FUTURE-EXECUTORS.md  coordinator/executor research notes
 profiles/                 built-in expert capability profiles
+runtime-contract.json     machine-readable plugin/runtime contract
 runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
 tests/                    contract and smoke tests
@@ -68,6 +70,7 @@ references/               source-plan and legacy-reference notes
 ```bash
 python3 runtime/swarm_rt.py health
 python3 runtime/swarm_rt.py planned-commands
+python3 runtime/swarm_rt.py runtime-contract
 python3 runtime/swarm_rt.py context-build --brief fixtures/phase2/brief.json --out /tmp/swarm-summary.md
 python3 runtime/swarm_rt.py prompt-build --request fixtures/phase2/prompt-requests/response.json --out-dir /tmp/swarm-prompt
 python3 runtime/swarm_rt.py collect-merge --spawn-order fixtures/phase1/spawn-order.json --wait-result fixtures/phase1/wait-partial-1.json --wait-result fixtures/phase1/wait-partial-2.json

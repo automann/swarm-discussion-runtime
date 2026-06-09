@@ -18,6 +18,7 @@ from swarm.capabilities import (
     load_json as load_profile_json,
 )
 from swarm.collect import collect_merge
+from swarm.contract import load_runtime_contract, validate_runtime_contract
 from swarm.context import build_context_summary
 from swarm.loop import validate_minimal_loop
 from swarm.prompt import build_prompt
@@ -45,6 +46,13 @@ def cmd_health(_args: argparse.Namespace) -> int:
 def cmd_planned_commands(_args: argparse.Namespace) -> int:
     emit({"commands": planned_commands()})
     return 0
+
+
+def cmd_runtime_contract(args: argparse.Namespace) -> int:
+    contract = load_runtime_contract(args.path)
+    validation = validate_runtime_contract(contract)
+    emit({"ok": validation["ok"], "contract": contract, "validation": validation})
+    return 0 if validation["ok"] else 1
 
 
 def load_json(path: Path) -> Any:
@@ -197,6 +205,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     planned = sub.add_parser("planned-commands", help="List planned runtime command surface")
     planned.set_defaults(func=cmd_planned_commands)
+
+    contract = sub.add_parser("runtime-contract", help="Emit and validate the runtime/plugin contract")
+    contract.add_argument("--path", type=Path, help="Optional runtime-contract JSON path")
+    contract.set_defaults(func=cmd_runtime_contract)
 
     collect = sub.add_parser("collect-merge", help="Merge host wait-result batches in spawn order")
     collect.add_argument("--spawn-order", type=Path, required=True, help="JSON spawn-order list")

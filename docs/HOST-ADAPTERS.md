@@ -4,6 +4,9 @@ Phase 5 keeps Codex and Claude usable while moving discussion mechanics into
 runtime helpers. A host adapter is intentionally thin: it spawns agents, waits
 for host results, writes transport artifacts, and calls the next runtime helper.
 
+For the package boundary shared by the skill prompt, host adapters, and runtime,
+see `docs/RUNTIME-PACKAGE-BOUNDARY.md` and `runtime-contract.json`.
+
 The host adapter does not construct prompts, demux partial wait batches by
 guessing, mutate round state by hand, validate quality, or decide audit health.
 
