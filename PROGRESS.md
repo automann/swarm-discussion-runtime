@@ -180,3 +180,33 @@ Use this shape for every future implementation round:
 - Next: Phase 5 Thin Host Adapter should document how Codex and Claude hosts
   call these runtime primitives with parent context limited to brief, phase,
   agent ids, and next helper command.
+
+## 2026-06-09 - Phase 5 Thin Host Adapter Contracts
+
+- Commit: this commit.
+- Roadmap alignment: Phase 5 deliverables: Codex adapter recipe, Claude adapter
+  recipe, and host transport metadata schema. The acceptance invariant is that
+  parent context stays limited to brief, current phase, agent ids, and next
+  helper command.
+- Work summary: Added `docs/HOST-ADAPTERS.md`,
+  `schemas/host-transport.schema.json`, host-step fixtures for Codex and
+  Claude, `runtime/swarm/adapter.py`, and a `validate-host-step` CLI command.
+  The adapter contract records host primitives and artifact paths while keeping
+  prompt construction, fan-in merge, WAL mutation, trace, and evidence inside
+  runtime helpers. Also taught `collect-merge` to consume JSONL wait-batch
+  streams so the documented host recipe is executable.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests rejecting parent-context bloat, missing
+  transport result keys, unknown hosts, phase mismatches, and schema drift away
+  from the thin parent-context surface. Added a JSONL wait-batch regression test
+  so host transport artifacts stay compatible with `collect-merge`.
+- AgenTeam review: This mirrors AgenTeam's runner boundary at the discipline
+  level: the host runner can invoke tools and persist artifacts, but runtime
+  primitives own state, prompt, transition, trace, and evidence semantics. It
+  deliberately avoids copying AgenTeam's full pipeline/stage/role model because
+  this phase only needs a host transport contract.
+- Drift status: ON TRACK. Phase 5 preserves existing Codex and Claude hosts
+  while making their allowed context and artifact duties auditable.
+- Next: Phase 6 should add capability profile contracts, preserve no-tools
+  expert defaults, and prepare future readonly executor notes without granting
+  broad expert tools prematurely.

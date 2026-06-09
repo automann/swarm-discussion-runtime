@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm import __version__, planned_commands
+from swarm.adapter import validate_host_transport_metadata
 from swarm.audit import build_evidence, build_trace
 from swarm.collect import collect_merge
 from swarm.context import build_context_summary
@@ -42,9 +43,21 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text())
 
 
+def load_wait_result_batches(path: Path) -> list[Any]:
+    text = path.read_text()
+    if path.suffix != ".jsonl":
+        try:
+            return [json.loads(text)]
+        except json.JSONDecodeError:
+            pass
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+
 def cmd_collect_merge(args: argparse.Namespace) -> int:
     spawn_order = load_json(args.spawn_order)
-    wait_results = [load_json(path) for path in args.wait_result]
+    wait_results: list[Any] = []
+    for path in args.wait_result:
+        wait_results.extend(load_wait_result_batches(path))
     result = collect_merge(spawn_order, wait_results)
     emit(result)
     return 0 if result["ok"] else 1
@@ -117,6 +130,12 @@ def cmd_evidence(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_validate_host_step(args: argparse.Namespace) -> int:
+    result = validate_host_transport_metadata(load_json(args.host_step))
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
 def cmd_validate_round(args: argparse.Namespace) -> int:
     result = validate_round_file(args.round_path)
     emit(result)
@@ -149,7 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         action="append",
         required=True,
-        help="JSON wait-result batch; repeat to merge partial batches",
+        help="JSON wait-result batch or JSONL wait-batches stream; repeat to merge partial batches",
     )
     collect.set_defaults(func=cmd_collect_merge)
 
@@ -195,6 +214,13 @@ def build_parser() -> argparse.ArgumentParser:
     evidence.add_argument("--dir", type=Path, required=True, help="Discussion directory")
     evidence.add_argument("--output", type=Path, help="Optional evidence JSON output path")
     evidence.set_defaults(func=cmd_evidence)
+
+    validate_host_step = sub.add_parser(
+        "validate-host-step",
+        help="Validate thin host-adapter transport metadata",
+    )
+    validate_host_step.add_argument("host_step", type=Path)
+    validate_host_step.set_defaults(func=cmd_validate_host_step)
 
     validate_round = sub.add_parser("validate-round", help="Validate one committed round JSON file")
     validate_round.add_argument("round_path", type=Path)

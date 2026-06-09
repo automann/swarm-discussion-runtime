@@ -72,6 +72,33 @@ def test_collect_merge_cli_reports_partial_batches_as_not_ok() -> None:
     assert payload["missingAgentIds"] == ["agent-c"]
 
 
+def test_collect_merge_cli_accepts_jsonl_wait_batches(tmp_path: Path) -> None:
+    wait_batches = tmp_path / "wait-batches-stream"
+    wait_batches.write_text(
+        "\n".join(
+            [
+                json.dumps(load_json(FIXTURES / "wait-partial-1.json")),
+                json.dumps(load_json(FIXTURES / "wait-partial-2.json")),
+            ]
+        )
+        + "\n"
+    )
+
+    result = run_cli(
+        "collect-merge",
+        "--spawn-order",
+        str(FIXTURES / "spawn-order.json"),
+        "--wait-result",
+        str(wait_batches),
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["complete"] is True
+    assert payload["receivedAgentIds"] == ["agent-a", "agent-b", "agent-c"]
+
+
 def test_collect_merge_rejects_non_object_status() -> None:
     result = collect_merge(
         [{"agentId": "agent-a", "persona": "architect"}],
