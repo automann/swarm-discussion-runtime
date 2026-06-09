@@ -1,0 +1,64 @@
+{
+  "phase": "argumentation",
+  "roundId": 1,
+  "topic": "Tabs vs spaces in a shared codebase",
+  "contextSummary": "# Context Summary\n\n## Objective\nChoose a whitespace policy that reduces churn while preserving formatter determinism.\n",
+  "persona": {
+    "id": "architect",
+    "name": "Architect",
+    "expertise": [
+      "software architecture"
+    ],
+    "thinkingStyle": "systems-oriented",
+    "bias": "favor explicit project conventions",
+    "replyTendency": "structured",
+    "stakes": "Bad advice creates noisy diffs.",
+    "blindSpots": [
+      "may underweight migration fatigue"
+    ]
+  },
+  "messages": [
+    {
+      "id": "r1-msg-001",
+      "from": "architect",
+      "type": "position_declaration",
+      "content": {
+        "summary": "Let the formatter define whitespace."
+      },
+      "references": []
+    },
+    {
+      "id": "r1-msg-002",
+      "from": "contrarian",
+      "type": "position_declaration",
+      "content": {
+        "summary": "Respect local history before normalizing style."
+      },
+      "references": []
+    },
+    {
+      "id": "r1-msg-003",
+      "from": "moderator",
+      "type": "moderator_opening",
+      "content": {
+        "summary": "The real disagreement is formatter determinism versus migration churn."
+      },
+      "references": [
+        {
+          "targetId": "r1-msg-001",
+          "relation": "extends"
+        }
+      ]
+    },
+    {
+      "id": "r1-msg-004",
+      "from": "maintainer",
+      "type": "argument",
+      "content": {
+        "summary": "Later argument that should not be in the argumentation prompt seed."
+      },
+      "references": []
+    }
+  ],
+  "instruction": "Make the strongest case for your position while citing visible IDs."
+}

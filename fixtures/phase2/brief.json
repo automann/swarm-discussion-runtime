@@ -1,0 +1,19 @@
+{
+  "discussionId": "tabs-vs-spaces",
+  "topic": "Tabs vs spaces in a shared codebase",
+  "mode": "lightweight",
+  "objective": "Choose a whitespace policy that reduces churn while preserving formatter determinism.",
+  "parentContext": "The parent agent is advising on repository-wide style policy before making code changes.",
+  "constraints": [
+    "Do not rewrite unrelated files.",
+    "Prefer existing project formatter behavior when it is already configured."
+  ],
+  "knownFacts": [
+    "The repository already contains mixed historical style.",
+    "The decision should be easy for future automation to verify."
+  ],
+  "successCriteria": [
+    "Recommendation is actionable.",
+    "Risks and migration costs are explicit."
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "phase": "declaration",
+  "roundId": 1,
+  "topic": "Tabs vs spaces in a shared codebase",
+  "contextSummary": "# Context Summary\n\n## Objective\nChoose a whitespace policy that reduces churn while preserving formatter determinism.\n",
+  "persona": {
+    "id": "architect",
+    "name": "Architect",
+    "expertise": [
+      "software architecture",
+      "repository governance"
+    ],
+    "thinkingStyle": "systems-oriented",
+    "bias": "favor explicit project conventions",
+    "replyTendency": "structured and concise",
+    "stakes": "If wrong, future refactors become noisy and hard to audit.",
+    "blindSpots": [
+      "may underweight local team habits"
+    ]
+  },
+  "messages": [
+    {
+      "id": "r1-msg-001",
+      "from": "contrarian",
+      "type": "position_declaration",
+      "content": {
+        "summary": "Peer content that must not be visible during declaration."
+      },
+      "references": []
+    }
+  ]
+}

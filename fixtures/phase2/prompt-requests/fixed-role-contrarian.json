@@ -1,0 +1,31 @@
+{
+  "phase": "contrarian",
+  "roundId": 1,
+  "topic": "Tabs vs spaces in a shared codebase",
+  "contextSummary": "# Context Summary\n\n## Objective\nChoose a whitespace policy that reduces churn while preserving formatter determinism.\n",
+  "messages": [
+    {
+      "id": "r1-msg-001",
+      "from": "architect",
+      "type": "argument",
+      "content": {
+        "summary": "Formatter-defined whitespace gives deterministic automation."
+      },
+      "references": []
+    },
+    {
+      "id": "r1-msg-002",
+      "from": "maintainer",
+      "type": "argument",
+      "content": {
+        "summary": "Document the migration to avoid broad noisy rewrites."
+      },
+      "references": [
+        {
+          "targetId": "r1-msg-001",
+          "relation": "extends"
+        }
+      ]
+    }
+  ]
+}
