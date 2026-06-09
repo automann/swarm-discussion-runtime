@@ -21,6 +21,7 @@ def planned_commands() -> list[str]:
         "append-message",
         "checkpoint",
         "finalize-round",
+        "resume-plan",
         "validate-round",
         "validate-discussion",
         "trace",

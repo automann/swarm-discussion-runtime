@@ -1,0 +1,245 @@
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from swarm.wal import append_message, checkpoint, finalize_round, resume_plan
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CLI = ROOT / "runtime" / "swarm_rt.py"
+
+
+def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CLI), *args],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def valid_round_state(messages: list[dict], synthesis: dict | None = None) -> dict:
+    argument_graph = [
+        {"from": message["id"], "to": ref["targetId"], "relation": ref["relation"]}
+        for message in messages
+        for ref in message.get("references", [])
+    ]
+    return {
+        "roundId": 1,
+        "topic": "Tabs vs spaces",
+        "mode": "lightweight",
+        "timestamp": "2026-06-09T00:00:00Z",
+        "messages": messages,
+        "argumentGraph": argument_graph,
+        "positionShifts": [],
+        "synthesis": synthesis or {},
+        "metadata": {
+            "messageCount": len(messages),
+            "participants": sorted({message["from"] for message in messages}),
+            "referenceCount": len(argument_graph),
+        },
+    }
+
+
+def message(sender: str, summary: str, refs: list[dict] | None = None) -> dict:
+    return {
+        "from": sender,
+        "type": "argument",
+        "content": {"summary": summary},
+        "references": refs or [],
+    }
+
+
+def read_json(path: Path) -> dict:
+    return json.loads(path.read_text())
+
+
+def test_append_message_mints_gapless_ids_from_wal_state_not_progress_log(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    discussion.mkdir()
+    (discussion / "progress.md").write_text("r1-msg-999 emitted\n")
+
+    first = append_message(discussion, 1, "declarations", message("architect", "Use formatter."))
+    second = append_message(
+        discussion,
+        1,
+        "arguments",
+        message(
+            "contrarian",
+            "Respect migration cost.",
+            [{"targetId": "r1-msg-001", "relation": "questions"}],
+        ),
+    )
+
+    assert first["ok"] is True
+    assert first["message"]["id"] == "r1-msg-001"
+    assert second["ok"] is True
+    assert second["message"]["id"] == "r1-msg-002"
+    partial = read_json(discussion / "rounds" / "001.json.partial")
+    assert [item["id"] for item in partial["messages"]] == ["r1-msg-001", "r1-msg-002"]
+    assert partial["phase"] == "arguments"
+
+
+def test_append_message_rejects_invalid_reference_relation(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    append_message(discussion, 1, "declarations", message("architect", "Use formatter."))
+
+    result = append_message(
+        discussion,
+        1,
+        "arguments",
+        message("contrarian", "I agree.", [{"targetId": "r1-msg-001", "relation": "agrees"}]),
+    )
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_relation" for error in result["errors"])
+
+
+def test_append_message_rejects_finalized_round_without_partial(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    messages = [
+        {
+            **message("architect", "Use formatter."),
+            "id": "r1-msg-001",
+        }
+    ]
+    finalize_round(
+        discussion,
+        1,
+        valid_round_state(messages, {"recommendation": "Use formatter."}),
+    )
+
+    result = append_message(discussion, 1, "arguments", message("contrarian", "Too late."))
+
+    assert result["ok"] is False
+    assert any(error["code"] == "round_finalized" for error in result["errors"])
+
+
+def test_finalize_round_flushes_final_state_before_commit(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    append_message(discussion, 1, "declarations", message("architect", "Use formatter."))
+    final_messages = [
+        {
+            **message("architect", "Use formatter."),
+            "id": "r1-msg-001",
+        },
+        {
+            **message(
+                "maintainer",
+                "Document migration.",
+                [{"targetId": "r1-msg-001", "relation": "extends"}],
+            ),
+            "id": "r1-msg-002",
+        },
+    ]
+
+    result = finalize_round(
+        discussion,
+        1,
+        valid_round_state(final_messages, {"recommendation": "Use formatter with migration notes."}),
+    )
+
+    assert result["ok"] is True
+    final = read_json(discussion / "rounds" / "001.json")
+    assert final["synthesis"]["recommendation"] == "Use formatter with migration notes."
+    assert [item["id"] for item in final["messages"]] == ["r1-msg-001", "r1-msg-002"]
+    assert not (discussion / "rounds" / "001.json.partial").exists()
+
+
+def test_finalize_round_rejects_missing_synthesis(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    messages = [
+        {
+            **message("architect", "Use formatter."),
+            "id": "r1-msg-001",
+        }
+    ]
+
+    result = finalize_round(discussion, 1, valid_round_state(messages))
+
+    assert result["ok"] is False
+    assert any(error["code"] == "missing_synthesis" for error in result["errors"])
+
+
+def test_resume_plan_uses_highest_round_and_only_prefers_partial_on_that_round(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    rounds = discussion / "rounds"
+    rounds.mkdir(parents=True)
+    (rounds / "001.json.partial").write_text(
+        json.dumps({"roundId": 1, "round": 1, "phase": "arguments", "messages": []})
+    )
+    (rounds / "002.json").write_text(
+        json.dumps(
+            {
+                "roundId": 2,
+                "round": 2,
+                "phase": "complete",
+                "messages": [
+                    {
+                        "id": "r2-msg-001",
+                        "from": "architect",
+                        "type": "argument",
+                        "content": {"summary": "Round 2"},
+                        "references": [],
+                    }
+                ],
+            }
+        )
+    )
+
+    result = resume_plan(discussion)
+
+    assert result["ok"] is True
+    assert result["source"] == "final"
+    assert result["round"] == 2
+    assert result["maxId"] == "r2-msg-001"
+    assert result["nextMessageId"] == "r2-msg-002"
+
+    (rounds / "003.json.partial").write_text(
+        json.dumps({"roundId": 3, "round": 3, "phase": "responses", "messages": []})
+    )
+    result = resume_plan(discussion)
+
+    assert result["source"] == "partial"
+    assert result["round"] == 3
+    assert result["phase"] == "responses"
+    assert result["nextMessageId"] == "r3-msg-001"
+
+
+def test_checkpoint_cli_writes_partial_and_event_log(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps(valid_round_state([])))
+
+    result = run_cli(
+        "checkpoint",
+        "--dir",
+        str(discussion),
+        "--round",
+        "1",
+        "--phase",
+        "declarations",
+        "--state",
+        str(state_path),
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert (discussion / "rounds" / "001.json.partial").exists()
+    events = (discussion / "events.jsonl").read_text().strip().splitlines()
+    assert json.loads(events[-1])["type"] == "checkpoint_written"
+
+
+def test_resume_plan_cli_reports_no_state(tmp_path: Path) -> None:
+    result = run_cli("resume-plan", "--dir", str(tmp_path / "missing-discussion"))
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["source"] == "none"
+    assert payload["nextAction"] == "start_round"

@@ -131,3 +131,26 @@ Use this shape for every future implementation round:
   review and acceptance.
 - Next: Continue Phase 3 WAL Runtime Core with the new ledger and review
   checklist active.
+
+## 2026-06-09 - Phase 3 WAL Runtime Core
+
+- Commit: this commit.
+- Roadmap alignment: Phase 3 deliverables: state/event helpers,
+  `append-message`, `checkpoint`, `finalize-round`, and resume plan.
+- Work summary: Added `runtime/swarm/wal.py`, CLI commands for WAL mutation and
+  resume planning, event logging to `events.jsonl`, atomic partial writes,
+  flush-then-commit finalization, and `resume-plan` in the command surface.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests for invalid relations, finalized-round append
+  attempts, missing synthesis on finalize, progress-only ID drift, and stale
+  lower-round partials losing to newer finals during resume planning.
+- AgenTeam review: Follows AgenTeam's artifact-first state/event discipline:
+  durable JSON state files, append-only JSONL events, machine-readable command
+  results, and resume behavior derived from local artifacts. It intentionally
+  avoids AgenTeam's stage/gate/role pipeline because discussion WAL state is a
+  smaller protocol primitive.
+- Drift status: ON TRACK. The parent agent can now delegate ID minting,
+  partial checkpointing, final commit, and resume choice to runtime helpers
+  instead of carrying those mechanics in conversation context.
+- Next: Phase 4 trace/evidence should consume the prompt, collect, WAL,
+  validation, and event artifacts created so far.

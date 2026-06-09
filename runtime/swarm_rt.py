@@ -13,6 +13,7 @@ from swarm.collect import collect_merge
 from swarm.context import build_context_summary
 from swarm.prompt import build_prompt
 from swarm.validation import validate_discussion_dir, validate_round_file
+from swarm.wal import append_message, checkpoint, finalize_round, resume_plan
 
 
 def emit(payload: dict[str, Any]) -> None:
@@ -76,6 +77,30 @@ def cmd_prompt_build(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_append_message(args: argparse.Namespace) -> int:
+    result = append_message(args.dir, args.round, args.phase, load_json(args.message))
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
+def cmd_checkpoint(args: argparse.Namespace) -> int:
+    result = checkpoint(args.dir, args.round, args.phase, load_json(args.state))
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
+def cmd_finalize_round(args: argparse.Namespace) -> int:
+    result = finalize_round(args.dir, args.round, load_json(args.state))
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
+def cmd_resume_plan(args: argparse.Namespace) -> int:
+    result = resume_plan(args.dir)
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
 def cmd_validate_round(args: argparse.Namespace) -> int:
     result = validate_round_file(args.round_path)
     emit(result)
@@ -121,6 +146,30 @@ def build_parser() -> argparse.ArgumentParser:
     prompt.add_argument("--request", type=Path, required=True, help="JSON prompt-build request")
     prompt.add_argument("--out-dir", type=Path, help="Optional output directory for prompt artifacts")
     prompt.set_defaults(func=cmd_prompt_build)
+
+    append = sub.add_parser("append-message", help="Mint and append one message to a round WAL")
+    append.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    append.add_argument("--round", type=int, required=True, help="Round number")
+    append.add_argument("--phase", required=True, help="Current phase name")
+    append.add_argument("--message", type=Path, required=True, help="JSON message payload without id")
+    append.set_defaults(func=cmd_append_message)
+
+    checkpoint_cmd = sub.add_parser("checkpoint", help="Atomically write a round partial")
+    checkpoint_cmd.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    checkpoint_cmd.add_argument("--round", type=int, required=True, help="Round number")
+    checkpoint_cmd.add_argument("--phase", required=True, help="Current phase name")
+    checkpoint_cmd.add_argument("--state", type=Path, required=True, help="JSON round state")
+    checkpoint_cmd.set_defaults(func=cmd_checkpoint)
+
+    finalize = sub.add_parser("finalize-round", help="Flush final state and promote partial to final")
+    finalize.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    finalize.add_argument("--round", type=int, required=True, help="Round number")
+    finalize.add_argument("--state", type=Path, required=True, help="Final round JSON state")
+    finalize.set_defaults(func=cmd_finalize_round)
+
+    resume = sub.add_parser("resume-plan", help="Describe how to resume from WAL state")
+    resume.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    resume.set_defaults(func=cmd_resume_plan)
 
     validate_round = sub.add_parser("validate-round", help="Validate one committed round JSON file")
     validate_round.add_argument("round_path", type=Path)

@@ -66,6 +66,7 @@ swarm-rt collect-merge
 swarm-rt append-message
 swarm-rt checkpoint
 swarm-rt finalize-round
+swarm-rt resume-plan
 swarm-rt validate-round
 swarm-rt validate-discussion
 swarm-rt trace

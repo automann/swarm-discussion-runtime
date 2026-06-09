@@ -63,6 +63,7 @@ python3 runtime/swarm_rt.py planned-commands
 python3 runtime/swarm_rt.py context-build --brief fixtures/phase2/brief.json --out /tmp/swarm-summary.md
 python3 runtime/swarm_rt.py prompt-build --request fixtures/phase2/prompt-requests/response.json --out-dir /tmp/swarm-prompt
 python3 runtime/swarm_rt.py collect-merge --spawn-order fixtures/phase1/spawn-order.json --wait-result fixtures/phase1/wait-partial-1.json --wait-result fixtures/phase1/wait-partial-2.json
+python3 runtime/swarm_rt.py resume-plan --dir fixtures/phase1/discussions/complete
 python3 runtime/swarm_rt.py validate-round fixtures/phase1/discussions/complete/rounds/001.json
 python3 runtime/swarm_rt.py validate-discussion fixtures/phase1/discussions/complete
 python3 -m pytest
