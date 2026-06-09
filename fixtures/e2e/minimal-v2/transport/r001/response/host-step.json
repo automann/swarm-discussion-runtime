@@ -11,7 +11,7 @@
       "agent-architect",
       "agent-contrarian"
     ],
-    "nextHelperCommand": "swarm-rt collect-merge --spawn-order transport/r001/response/spawn-order.json --wait-result transport/r001/response/wait-batches.jsonl"
+    "nextHelperCommand": "swarm-rt transport-collect --dir . --round 1 --phase response"
   },
   "runtimeCommands": {
     "contextBuild": "swarm-rt context-build --brief brief.json --out context/summary.md",

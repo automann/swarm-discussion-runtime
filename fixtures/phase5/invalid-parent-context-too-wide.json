@@ -8,7 +8,7 @@
     "briefPath": "context/summary.md",
     "phase": "response",
     "agentIds": ["agent-b", "agent-a"],
-    "nextHelperCommand": "swarm-rt collect-merge ...",
+    "nextHelperCommand": "swarm-rt transport-collect --dir . --round 1 --phase response",
     "fullDiscussionHistory": ["r1-msg-001", "r1-msg-002"],
     "promptText": "Full generated prompt should stay in prompt artifacts.",
     "roundState": {

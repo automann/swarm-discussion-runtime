@@ -68,7 +68,7 @@ def test_fixture_host_step_keeps_parent_context_thin() -> None:
     assert result["summary"]["parentContextSurface"] == {
         "agentIds": ["agent-architect", "agent-contrarian"],
         "briefPath": "context/summary.md",
-        "nextHelperCommand": "swarm-rt collect-merge --spawn-order transport/r001/response/spawn-order.json --wait-result transport/r001/response/wait-batches.jsonl",
+        "nextHelperCommand": "swarm-rt transport-collect --dir . --round 1 --phase response",
         "phase": "response",
     }
 

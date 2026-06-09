@@ -38,7 +38,7 @@ def test_codex_host_step_fixture_keeps_parent_context_thin() -> None:
     assert result["summary"]["parentContextSurface"] == {
         "agentIds": ["agent-b", "agent-a"],
         "briefPath": "context/summary.md",
-        "nextHelperCommand": "swarm-rt collect-merge --spawn-order transport/r001/response/spawn-order.json --wait-result transport/r001/response/wait-batches.jsonl",
+        "nextHelperCommand": "swarm-rt transport-collect --dir . --round 1 --phase response",
         "phase": "response",
     }
 
@@ -68,7 +68,7 @@ def test_parent_context_surface_drops_non_contract_fields_for_audit_display() ->
     assert parent_context_surface(payload) == {
         "agentIds": ["agent-b", "agent-a"],
         "briefPath": "context/summary.md",
-        "nextHelperCommand": "swarm-rt collect-merge ...",
+        "nextHelperCommand": "swarm-rt transport-collect --dir . --round 1 --phase response",
         "phase": "response",
     }
 
