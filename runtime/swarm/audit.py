@@ -8,6 +8,11 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from swarm.capabilities import (
+    capability_doctor_report,
+    default_profile_path,
+    load_jsonl as load_tool_evidence_jsonl,
+)
 from swarm.validation import validate_discussion_dir, validate_round_file
 from swarm.wal import resume_plan
 
@@ -209,6 +214,68 @@ def _quality_summary(discussion_dir: Path) -> dict[str, Any]:
     }
 
 
+def _capability_summary(discussion_dir: Path) -> dict[str, Any]:
+    capability_dir = discussion_dir / "capabilities"
+    discussion_profile_path = capability_dir / "profile.json"
+    source = "discussion" if discussion_profile_path.exists() else "default"
+    profile_path = discussion_profile_path if source == "discussion" else default_profile_path()
+    profile, profile_error = _load_json(profile_path)
+    if not isinstance(profile, dict):
+        errors = [profile_error] if profile_error else [_issue("invalid_profile", str(profile_path), "profile must be an object")]
+        return {
+            "ok": False,
+            "source": source,
+            "profilePath": str(profile_path),
+            "toolEvidencePath": None,
+            "paths": [str(profile_path)],
+            "errors": errors,
+            "profile": {},
+            "effective": {},
+            "toolEvidence": {
+                "recordCount": 0,
+                "acceptedCount": 0,
+                "citable": False,
+                "accepted": [],
+                "errors": errors,
+            },
+        }
+
+    tool_evidence_path = capability_dir / "tool-evidence.jsonl"
+    records = None
+    tool_errors: list[dict[str, Any]] = []
+    if tool_evidence_path.exists():
+        records, tool_errors = load_tool_evidence_jsonl(tool_evidence_path)
+
+    report = capability_doctor_report(
+        profile,
+        records,
+        tool_evidence_base_dir=capability_dir if tool_evidence_path.exists() else None,
+    )
+    errors = [*tool_errors, *report.get("errors", [])]
+    tool_evidence = dict(report.get("toolEvidence") or {})
+    tool_evidence["errors"] = [*tool_errors, *tool_evidence.get("errors", [])]
+
+    paths = [str(profile_path)]
+    if tool_evidence_path.exists():
+        paths.append(str(tool_evidence_path))
+    for accepted in tool_evidence.get("accepted", []) or []:
+        artifact_path = accepted.get("artifactPath")
+        if isinstance(artifact_path, str) and artifact_path.strip():
+            paths.append(str(capability_dir / artifact_path))
+
+    return {
+        "ok": not errors,
+        "source": source,
+        "profilePath": str(profile_path),
+        "toolEvidencePath": str(tool_evidence_path) if tool_evidence_path.exists() else None,
+        "paths": sorted(dict.fromkeys(paths)),
+        "errors": errors,
+        "profile": report.get("profile", {}),
+        "effective": report.get("effective", {}),
+        "toolEvidence": tool_evidence,
+    }
+
+
 def _artifact_paths(discussion_dir: Path) -> list[str]:
     if not discussion_dir.exists():
         return []
@@ -225,6 +292,7 @@ def _next_action(
     transport: dict[str, Any],
     resume: dict[str, Any],
     manifest: dict[str, Any],
+    capabilities: dict[str, Any],
 ) -> dict[str, Any]:
     if not validation.get("ok", False):
         return {
@@ -258,6 +326,14 @@ def _next_action(
             "phase": resume.get("phase"),
         }
 
+    if not capabilities.get("ok", True):
+        return {
+            "kind": "inspect_capabilities",
+            "command": "swarm-rt capability-doctor --profile <profile.json> --tool-evidence <tool-evidence.jsonl>",
+            "reason": "capability profile or tool evidence is not citable",
+            "errorCount": len(capabilities.get("errors") or []),
+        }
+
     status = manifest.get("status")
     if status in {"completed", "complete", "done"} and resume.get("source") == "final":
         return {"kind": "none", "command": None, "reason": "discussion completed"}
@@ -266,9 +342,17 @@ def _next_action(
     return {"kind": "inspect_artifacts", "command": "swarm-rt trace --dir <discussion-dir>", "reason": "manual inspection needed"}
 
 
-def _health(validation: dict[str, Any], transport: dict[str, Any], resume: dict[str, Any], next_action: dict[str, Any]) -> str:
+def _health(
+    validation: dict[str, Any],
+    transport: dict[str, Any],
+    resume: dict[str, Any],
+    next_action: dict[str, Any],
+    capabilities: dict[str, Any],
+) -> str:
     if not validation.get("ok", False):
         return "off-track"
+    if not capabilities.get("ok", True):
+        return "at-risk"
     if next_action.get("kind") in {"poll_remaining", "resume_round", "start_round", "inspect_artifacts"}:
         return "at-risk"
     if transport.get("errors") or resume.get("source") == "partial":
@@ -330,7 +414,8 @@ def build_trace(discussion_dir: Path) -> dict[str, Any]:
     events = _events_summary(discussion_dir)
     rounds = _round_summary(discussion_dir)
     quality = _quality_summary(discussion_dir)
-    next_action = _next_action(validation, transport, resume, manifest)
+    capabilities = _capability_summary(discussion_dir)
+    next_action = _next_action(validation, transport, resume, manifest, capabilities)
     return {
         "ok": True,
         "kind": TRACE_KIND,
@@ -342,12 +427,13 @@ def build_trace(discussion_dir: Path) -> dict[str, Any]:
             "status": manifest.get("status"),
             "schemaVersion": manifest.get("schemaVersion"),
         },
-        "health": _health(validation, transport, resume, next_action),
+        "health": _health(validation, transport, resume, next_action, capabilities),
         "validation": validation,
         "resume": resume,
         "rounds": rounds,
         "prompts": prompts,
         "transport": transport,
+        "capabilities": capabilities,
         "quality": quality,
         "events": events,
         "artifacts": {"root": str(discussion_dir), "paths": _artifact_paths(discussion_dir)},
@@ -372,10 +458,15 @@ def _outcome(trace: dict[str, Any]) -> dict[str, Any]:
 def _metrics(trace: dict[str, Any]) -> dict[str, Any]:
     artifacts = trace.get("artifacts", {}).get("paths", [])
     rounds = trace.get("rounds", {})
+    tool_evidence = trace.get("capabilities", {}).get("toolEvidence", {})
     return {
         "artifactCount": len(artifacts),
         "promptBuildCount": trace.get("prompts", {}).get("count", 0),
         "collectResultCount": trace.get("transport", {}).get("collectResultCount", 0),
+        "toolEvidenceRecordCount": tool_evidence.get("recordCount", 0),
+        "citableToolEvidenceCount": tool_evidence.get("acceptedCount", 0)
+        if tool_evidence.get("citable")
+        else 0,
         "finalRoundCount": rounds.get("finalCount", 0),
         "partialRoundCount": rounds.get("partialCount", 0),
         "eventCount": trace.get("events", {}).get("count", 0),
@@ -420,6 +511,22 @@ def build_evidence(discussion_dir: Path) -> dict[str, Any]:
             "phases": trace["prompts"].get("phases", {}),
             "personas": trace["prompts"].get("personas", {}),
             "visibility": trace["prompts"].get("visibility", {}),
+        },
+        "capabilities": {
+            "ok": trace["capabilities"].get("ok"),
+            "source": trace["capabilities"].get("source"),
+            "profilePath": trace["capabilities"].get("profilePath"),
+            "toolEvidencePath": trace["capabilities"].get("toolEvidencePath"),
+            "profile": trace["capabilities"].get("profile", {}),
+            "effective": trace["capabilities"].get("effective", {}),
+            "toolEvidence": {
+                "recordCount": trace["capabilities"].get("toolEvidence", {}).get("recordCount", 0),
+                "acceptedCount": trace["capabilities"].get("toolEvidence", {}).get("acceptedCount", 0),
+                "citable": trace["capabilities"].get("toolEvidence", {}).get("citable", False),
+                "accepted": trace["capabilities"].get("toolEvidence", {}).get("accepted", []),
+                "errorCount": len(trace["capabilities"].get("errors") or []),
+            },
+            "paths": trace["capabilities"].get("paths", []),
         },
         "wal": {
             "resume": trace["resume"],

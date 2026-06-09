@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "runtime" / "swarm_rt.py"
 PHASE1_DISCUSSION = ROOT / "fixtures" / "phase1" / "discussions" / "complete"
 PHASE2_RESPONSE = ROOT / "fixtures" / "phase2" / "prompt-requests" / "response.json"
+PHASE6_FIXTURES = ROOT / "fixtures" / "phase6"
+READONLY_PROFILE = ROOT / "profiles" / "expert-readonly.json"
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -89,6 +91,14 @@ def enrich_discussion_for_audit(discussion: Path) -> None:
     discussion.joinpath("events.jsonl").write_text("\n".join(json.dumps(event) for event in events) + "\n")
 
 
+def attach_capabilities(discussion: Path, tool_evidence_fixture: str = "tool-evidence-valid.jsonl") -> None:
+    capability_dir = discussion / "capabilities"
+    capability_dir.mkdir()
+    shutil.copyfile(READONLY_PROFILE, capability_dir / "profile.json")
+    shutil.copyfile(PHASE6_FIXTURES / tool_evidence_fixture, capability_dir / "tool-evidence.jsonl")
+    shutil.copytree(PHASE6_FIXTURES / "artifacts", capability_dir / "artifacts")
+
+
 def test_trace_reports_completed_fixture_health_and_artifact_summaries(tmp_path: Path) -> None:
     discussion = copy_complete_discussion(tmp_path)
     enrich_discussion_for_audit(discussion)
@@ -103,6 +113,47 @@ def test_trace_reports_completed_fixture_health_and_artifact_summaries(tmp_path:
     assert trace["transport"]["collectResults"][0]["complete"] is True
     assert trace["quality"]["synthesisPresent"] is True
     assert trace["events"]["counts"]["round_finalized"] == 1
+
+
+def test_trace_reports_default_no_tools_capability_when_discussion_has_no_profile(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+
+    trace = build_trace(discussion)
+
+    assert trace["capabilities"]["ok"] is True
+    assert trace["capabilities"]["source"] == "default"
+    assert trace["capabilities"]["profile"]["id"] == "expert-basic"
+    assert trace["capabilities"]["effective"]["allowedTools"] == []
+    assert trace["capabilities"]["effective"]["canCiteToolDerivedEvidence"] is False
+
+
+def test_trace_surfaces_citable_readonly_tool_evidence_from_discussion_artifacts(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    attach_capabilities(discussion)
+
+    trace = build_trace(discussion)
+
+    assert trace["health"] == "on-track"
+    assert trace["capabilities"]["source"] == "discussion"
+    assert trace["capabilities"]["profile"]["id"] == "expert-readonly"
+    assert trace["capabilities"]["toolEvidence"]["citable"] is True
+    assert trace["capabilities"]["toolEvidence"]["acceptedCount"] == 1
+    assert trace["capabilities"]["effective"]["canCiteToolDerivedEvidence"] is True
+
+
+def test_trace_marks_unvalidated_tool_evidence_at_risk(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    attach_capabilities(discussion, tool_evidence_fixture="tool-evidence-unvalidated.jsonl")
+
+    trace = build_trace(discussion)
+
+    assert trace["health"] == "at-risk"
+    assert trace["nextAction"]["kind"] == "inspect_capabilities"
+    assert trace["capabilities"]["toolEvidence"]["citable"] is False
+    assert any(error["code"] == "unvalidated_tool_evidence" for error in trace["capabilities"]["errors"])
 
 
 def test_trace_cli_suggests_resume_for_partial_round(tmp_path: Path) -> None:
@@ -205,8 +256,23 @@ def test_evidence_records_transport_validation_prompt_and_quality_summaries(tmp_
     assert evidence["transport"]["collectResultCount"] == 1
     assert evidence["prompts"]["promptBuildCount"] == 1
     assert evidence["quality"]["synthesisPresent"] is True
+    assert evidence["capabilities"]["profile"]["id"] == "expert-basic"
     assert evidence["rawHostLogs"]["required"] is False
     assert any(path.endswith("prompt-build.json") for path in evidence["artifacts"]["paths"])
+
+
+def test_evidence_records_capability_summary_without_embedding_tool_artifact_payload(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    attach_capabilities(discussion)
+
+    evidence = build_evidence(discussion)
+
+    assert evidence["capabilities"]["profile"]["id"] == "expert-readonly"
+    assert evidence["capabilities"]["toolEvidence"]["citable"] is True
+    assert evidence["metrics"]["toolEvidenceRecordCount"] == 1
+    assert any(path.endswith("capabilities/artifacts/read-001.json") for path in evidence["artifacts"]["paths"])
+    assert "excerptSha256" not in json.dumps(evidence["capabilities"])
 
 
 def test_evidence_cli_writes_same_json_as_stdout(tmp_path: Path) -> None:
@@ -230,3 +296,4 @@ def test_evidence_schema_requires_core_audit_summaries() -> None:
     assert "validation" in schema["required"]
     assert "prompts" in schema["required"]
     assert "quality" in schema["required"]
+    assert "capabilities" in schema["required"]

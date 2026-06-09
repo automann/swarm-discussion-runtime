@@ -240,3 +240,29 @@ Use this shape for every future implementation round:
 - Next: Start the next roadmap slice by wiring trace/evidence to surface
   capability profile summaries from real discussion directories, then use a
   smoke fixture to verify the end-to-end audit view.
+
+## 2026-06-09 - Capability Trace And Evidence
+
+- Commit: this commit.
+- Roadmap alignment: Phase 6 acceptance follow-through: tool-derived evidence
+  cannot be cited unless logged and validated, and default expert installs
+  remain no-tools in the trace/evidence audit view.
+- Work summary: Wired `trace` and `evidence` to summarize discussion-local
+  capability artifacts from `capabilities/profile.json` and
+  `capabilities/tool-evidence.jsonl`, with default fallback to built-in
+  `expert-basic`. Evidence now includes capability profile, effective tools,
+  tool-evidence counts, citable status, and capability artifact paths without
+  embedding raw tool artifact payloads.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests for missing discussion-local profiles resolving
+  to default no-tools, citable readonly evidence, and unvalidated evidence
+  forcing `health: at-risk` with `nextAction.kind: inspect_capabilities`.
+- AgenTeam review: This extends the AgenTeam-inspired evidence rule directly:
+  trace/evidence reference artifacts and effective configuration, while raw
+  tool outputs stay behind artifact paths. It still avoids enabling a runner or
+  granting tools inside the trace layer.
+- Drift status: ON TRACK. The autonomy scaffolding is now visible in audit
+  artifacts but remains non-operative by default.
+- Next: Build an end-to-end discussion fixture that includes host-step,
+  capability, prompt, transport, WAL, trace, and evidence artifacts so the
+  runtime can prove the smallest complete v2 discussion loop.

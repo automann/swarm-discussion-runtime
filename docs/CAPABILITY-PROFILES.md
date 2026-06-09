@@ -38,6 +38,21 @@ swarm-rt capability-doctor \
 
 The doctor is a report primitive. It does not grant tools or spawn agents.
 
+## Discussion Artifacts
+
+Trace and evidence look for capability artifacts inside a discussion directory:
+
+```text
+capabilities/profile.json
+capabilities/tool-evidence.jsonl
+capabilities/artifacts/<tool-artifact>.json
+```
+
+If `capabilities/profile.json` is absent, trace and evidence report the built-in
+`expert-basic` profile as the effective default. If `tool-evidence.jsonl` is
+present, each citable record must point at an artifact under the capabilities
+directory.
+
 ## Evidence Rule
 
 Tool-derived evidence is citable only when all of these are true:

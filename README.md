@@ -20,7 +20,8 @@ portable evidence.
 
 Phase 6 runtime primitives are underway. The CLI now includes fan-in merge,
 artifact validation, context summary, prompt-build helpers, WAL helpers,
-trace/evidence, thin host-step validation, and capability profile reports.
+trace/evidence with capability summaries, thin host-step validation, and
+capability profile reports.
 
 The first milestone is not feature parity. It is proving the smallest runtime
 pipeline:

@@ -20,6 +20,10 @@ python3 runtime/swarm_rt.py validate-discussion .swarm/discussions/<id>
 - Partial WAL state is reported as resumable, not mistaken for completed state.
 - `events.counts` reflects checkpoint/finalization activity when WAL helpers
   were used.
+- `capabilities` reports the effective expert profile. Missing discussion-local
+  profile artifacts should resolve to default `expert-basic`.
+- If `nextAction.kind` is `inspect_capabilities`, tool-derived evidence must be
+  treated as non-citable until the profile/evidence errors are fixed.
 
 ## Evidence Gate
 
@@ -29,5 +33,7 @@ python3 runtime/swarm_rt.py validate-discussion .swarm/discussions/<id>
   and full/gist visibility.
 - `validation` summarizes directory and round validation.
 - `quality` records synthesis/recommendation or quality score when available.
+- `capabilities` records profile id, allowed tools, tool-evidence counts, and
+  citable status without embedding raw tool artifact payloads.
 - `rawHostLogs.required` is false; host logs are secondary evidence and should
   only be opened when local artifacts are insufficient.

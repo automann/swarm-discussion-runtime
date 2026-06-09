@@ -11,6 +11,7 @@
     "validation",
     "transport",
     "prompts",
+    "capabilities",
     "wal",
     "quality",
     "trace",
@@ -42,6 +43,9 @@
       "type": "object"
     },
     "prompts": {
+      "type": "object"
+    },
+    "capabilities": {
       "type": "object"
     },
     "wal": {
