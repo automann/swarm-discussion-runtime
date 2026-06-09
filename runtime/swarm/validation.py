@@ -165,6 +165,36 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
                     )
                 )
 
+    position_shifts = round_record.get("positionShifts") or []
+    if not isinstance(position_shifts, list):
+        errors.append(
+            _issue(
+                "invalid_position_shifts",
+                "positionShifts",
+                "positionShifts must be a list",
+                round_record.get("positionShifts"),
+            )
+        )
+        position_shifts = []
+
+    for shift_index, shift in enumerate(position_shifts):
+        path = f"positionShifts[{shift_index}]"
+        if not isinstance(shift, dict):
+            errors.append(_issue("invalid_position_shift", path, "position shift must be an object"))
+            continue
+        trigger = shift.get("trigger")
+        trigger_ids = trigger if isinstance(trigger, list) else ([trigger] if trigger else [])
+        for trigger_id in trigger_ids:
+            if trigger_id not in present:
+                errors.append(
+                    _issue(
+                        "unresolved_shift_trigger",
+                        f"{path}.trigger",
+                        "position shift trigger must resolve to a present message id",
+                        trigger_id,
+                    )
+                )
+
     if not round_record.get("synthesis"):
         errors.append(_issue("missing_synthesis", "synthesis", "committed round must include synthesis"))
 
@@ -205,7 +235,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
 
     context_log = round_record.get("personaContextLog")
     if context_log:
-        for shift_index, shift in enumerate(round_record.get("positionShifts") or []):
+        for shift_index, shift in enumerate(position_shifts):
             if not isinstance(shift, dict):
                 continue
             trigger = shift.get("trigger")

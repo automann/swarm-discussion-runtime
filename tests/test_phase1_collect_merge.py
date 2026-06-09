@@ -70,3 +70,82 @@ def test_collect_merge_cli_reports_partial_batches_as_not_ok() -> None:
     payload = json.loads(result.stdout)
     assert payload["complete"] is False
     assert payload["missingAgentIds"] == ["agent-c"]
+
+
+def test_collect_merge_rejects_non_object_status() -> None:
+    result = collect_merge(
+        [{"agentId": "agent-a", "persona": "architect"}],
+        [{"status": [], "timed_out": False}],
+    )
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_status" for error in result["errors"])
+
+
+def test_collect_merge_keeps_completed_payload_when_later_batch_reports_same_agent_incomplete() -> None:
+    result = collect_merge(
+        [{"agentId": "agent-a", "persona": "architect"}],
+        [
+            {
+                "status": {
+                    "agent-a": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"done\"}"
+                    }
+                },
+                "timed_out": False,
+            },
+            {
+                "status": {
+                    "agent-a": {
+                        "running": True
+                    }
+                },
+                "timed_out": False,
+            },
+        ],
+    )
+
+    assert result["ok"] is True
+    assert result["results"][0]["result"]["claim"] == "done"
+
+
+def test_collect_merge_rejects_ambiguous_name_fallback_matches() -> None:
+    result = collect_merge(
+        [{"agentId": "missing-agent", "persona": "architect"}],
+        [
+            {
+                "status": {
+                    "agent-a": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"first\"}"
+                    },
+                    "agent-b": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"second\"}"
+                    },
+                },
+                "timed_out": False,
+            }
+        ],
+    )
+
+    assert result["ok"] is False
+    assert any(error["code"] == "ambiguous_fallback_match" for error in result["errors"])
+
+
+def test_collect_merge_marks_timed_out_batches_not_ok_even_when_results_are_complete() -> None:
+    result = collect_merge(
+        [{"agentId": "agent-a", "persona": "architect"}],
+        [
+            {
+                "status": {
+                    "agent-a": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"done\"}"
+                    }
+                },
+                "timed_out": True,
+            }
+        ],
+    )
+
+    assert result["complete"] is True
+    assert result["timedOut"] is True
+    assert result["ok"] is False

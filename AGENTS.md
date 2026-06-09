@@ -32,6 +32,9 @@ purpose.
 - Keep state transitions explicit.
 - Treat validators as part of the product, not as test-only helpers.
 - Add fixtures before relying on live host behavior.
+- Design failure tests alongside passing tests; bad inputs, partial artifacts,
+  stale state, ambiguous transport results, and invalid provenance must fail
+  loudly with stable machine-readable error codes.
 
 ## First Proof Point
 

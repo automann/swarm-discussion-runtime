@@ -44,6 +44,78 @@ def test_validate_round_rejects_relation_enum_violations() -> None:
     assert any(error["code"] == "invalid_relation" for error in result["errors"])
 
 
+def test_validate_round_rejects_message_id_gaps() -> None:
+    record = json.loads(ROUND.read_text())
+    record["messages"][2]["id"] = "r1-msg-004"
+    record["argumentGraph"][1]["from"] = "r1-msg-004"
+    record["argumentGraph"][2]["from"] = "r1-msg-004"
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "message_id_gap" for error in result["errors"])
+
+
+def test_validate_round_rejects_unresolved_references() -> None:
+    record = json.loads(ROUND.read_text())
+    record["messages"][1]["references"][0]["targetId"] = "r1-msg-999"
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "unresolved_reference" for error in result["errors"])
+
+
+def test_validate_round_rejects_position_shifts_that_are_not_a_list() -> None:
+    record = json.loads(ROUND.read_text())
+    record["positionShifts"] = {"expert": "maintainer"}
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_position_shifts" for error in result["errors"])
+
+
+def test_validate_round_rejects_shift_triggers_that_do_not_resolve() -> None:
+    record = json.loads(ROUND.read_text())
+    record["positionShifts"] = [
+        {
+            "type": "position_shift",
+            "expert": "maintainer",
+            "from": "mixed",
+            "to": "formatter-defined",
+            "trigger": ["r1-msg-999"],
+            "reasoning": "Changed after reading a non-existent message.",
+        }
+    ]
+    record["personaContextLog"]["maintainer"]["r1-msg-999"] = "full"
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "unresolved_shift_trigger" for error in result["errors"])
+
+
+def test_validate_round_rejects_shift_triggers_not_visible_in_full() -> None:
+    record = json.loads(ROUND.read_text())
+    record["positionShifts"] = [
+        {
+            "type": "position_shift",
+            "expert": "maintainer",
+            "from": "mixed",
+            "to": "formatter-defined",
+            "trigger": ["r1-msg-002"],
+            "reasoning": "Changed after reading a gist-only message.",
+        }
+    ]
+    record["personaContextLog"]["maintainer"]["r1-msg-002"] = "gist"
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "shift_trigger_not_visible" for error in result["errors"])
+
+
 def test_validate_round_cli_rejects_relation_enum_violations(tmp_path: Path) -> None:
     record = json.loads(ROUND.read_text())
     record["messages"][1]["references"][0]["relation"] = "agrees"
