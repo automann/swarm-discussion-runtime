@@ -21,6 +21,7 @@ from swarm.collect import collect_merge
 from swarm.context import build_context_summary
 from swarm.loop import validate_minimal_loop
 from swarm.prompt import build_prompt
+from swarm.smoke import adapter_smoke
 from swarm.validation import validate_discussion_dir, validate_round_file
 from swarm.wal import append_message, checkpoint, finalize_round, resume_plan
 
@@ -166,6 +167,12 @@ def cmd_validate_loop(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_adapter_smoke(args: argparse.Namespace) -> int:
+    result = adapter_smoke(args.dir, host_step_path=args.host_step)
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
 def cmd_validate_round(args: argparse.Namespace) -> int:
     result = validate_round_file(args.round_path)
     emit(result)
@@ -266,6 +273,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate_loop.add_argument("discussion_dir", type=Path)
     validate_loop.set_defaults(func=cmd_validate_loop)
+
+    smoke = sub.add_parser(
+        "adapter-smoke",
+        help="Smoke-check host adapter artifacts without spawning agents",
+    )
+    smoke.add_argument("--dir", type=Path, required=True, help="Discussion artifact directory")
+    smoke.add_argument("--host-step", type=Path, help="Optional host-step path relative to --dir")
+    smoke.set_defaults(func=cmd_adapter_smoke)
 
     validate_round = sub.add_parser("validate-round", help="Validate one committed round JSON file")
     validate_round.add_argument("round_path", type=Path)

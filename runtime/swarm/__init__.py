@@ -29,4 +29,5 @@ def planned_commands() -> list[str]:
         "validate-host-step",
         "capability-doctor",
         "validate-loop",
+        "adapter-smoke",
     ]

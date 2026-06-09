@@ -76,6 +76,28 @@ The metadata records where transport artifacts live and how the host identifies
 results. It is not a transcript. It references artifact paths instead of
 embedding raw outputs.
 
+## Adapter Smoke
+
+After a host adapter writes `host-step.json`, `spawn-order.json`,
+`wait-batches.jsonl`, and `collect-result.json`, run:
+
+```bash
+swarm-rt adapter-smoke --dir .swarm/discussions/<id>
+```
+
+For a single host step:
+
+```bash
+swarm-rt adapter-smoke \
+  --dir .swarm/discussions/<id> \
+  --host-step transport/r001/response/host-step.json
+```
+
+`adapter-smoke` validates the host-step contract, replays `collect-merge` from
+the recorded spawn order and wait batches, compares the replay with the stored
+collect result, then summarizes trace, evidence, capability, and loop status. It
+does not spawn agents and does not mutate discussion state.
+
 ## Acceptance Check
 
 The Phase 5 acceptance proof is this invariant:

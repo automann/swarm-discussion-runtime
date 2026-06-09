@@ -9,6 +9,7 @@ logs.
 ```bash
 python3 runtime/swarm_rt.py trace --dir .swarm/discussions/<id>
 python3 runtime/swarm_rt.py evidence --dir .swarm/discussions/<id> --output .swarm/discussions/<id>/artifacts/evidence.json
+python3 runtime/swarm_rt.py adapter-smoke --dir .swarm/discussions/<id>
 python3 runtime/swarm_rt.py validate-loop .swarm/discussions/<id>
 python3 runtime/swarm_rt.py validate-discussion .swarm/discussions/<id>
 ```
@@ -46,3 +47,11 @@ python3 runtime/swarm_rt.py validate-discussion .swarm/discussions/<id>
   result, finalized round, finalization event, capability summary, synthesis,
   trace artifact, and evidence artifact.
 - Bad host-step metadata or non-citable tool evidence must fail the loop check.
+
+## Adapter Gate
+
+- `adapter-smoke.summary.transportReplayOk` is true.
+- Replayed `collect-merge` output matches the stored `collect-result.json`.
+- Parent context surface remains limited to `briefPath`, `phase`, `agentIds`,
+  and `nextHelperCommand`.
+- The smoke command must fail if wait batches and collect result diverge.

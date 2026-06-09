@@ -292,3 +292,27 @@ Use this shape for every future implementation round:
 - Next: Use the minimal v2 loop as the basis for designing the first real
   adapter-facing smoke command or package boundary for the runtime/plugin
   integration.
+
+## 2026-06-09 - Adapter-Facing Smoke Command
+
+- Commit: this commit.
+- Roadmap alignment: Adapter/plugin integration follow-through after the
+  minimal v2 loop fixture. The goal is to give Codex and Claude adapters a real
+  runtime command they can run after writing host artifacts.
+- Work summary: Added `adapter-smoke --dir <discussion-dir>` with optional
+  `--host-step`. The command validates host-step metadata, replays
+  `collect-merge` from host-step artifact paths, compares replayed fan-in with
+  stored `collect-result.json`, and summarizes trace, evidence, capability, and
+  loop status without spawning agents or mutating state.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests for collect replay mismatch, bloated parent
+  context, missing host-step metadata, explicit host-step path handling, and the
+  successful minimal v2 fixture path.
+- AgenTeam review: This mirrors AgenTeam's separation between executor facade
+  and runtime validation: smoke checks host-produced artifacts and projections,
+  but it does not dispatch workers, modify state, or depend on raw session logs.
+- Drift status: ON TRACK. Adapter integration now has a concrete command-line
+  contract instead of an implicit checklist.
+- Next: Define the runtime/plugin package boundary so the published
+  `swarm-discussion` plugin can call these primitives without copying runtime
+  logic back into skill text.

@@ -21,8 +21,8 @@ portable evidence.
 Phase 6 runtime primitives are underway. The CLI now includes fan-in merge,
 artifact validation, context summary, prompt-build helpers, WAL helpers,
 trace/evidence with capability summaries, thin host-step validation, and
-capability profile reports. The first end-to-end fixture now anchors the
-smallest complete v2 loop.
+capability profile reports. The first end-to-end fixture and adapter smoke
+command now anchor the smallest complete v2 loop.
 
 The first milestone is not feature parity. It is proving the smallest runtime
 pipeline:
@@ -74,6 +74,7 @@ python3 runtime/swarm_rt.py collect-merge --spawn-order fixtures/phase1/spawn-or
 python3 runtime/swarm_rt.py resume-plan --dir fixtures/phase1/discussions/complete
 python3 runtime/swarm_rt.py trace --dir fixtures/e2e/minimal-v2
 python3 runtime/swarm_rt.py evidence --dir fixtures/e2e/minimal-v2 --output /tmp/swarm-evidence.json
+python3 runtime/swarm_rt.py adapter-smoke --dir fixtures/e2e/minimal-v2
 python3 runtime/swarm_rt.py validate-loop fixtures/e2e/minimal-v2
 python3 runtime/swarm_rt.py validate-host-step fixtures/phase5/codex-host-step.json
 python3 runtime/swarm_rt.py capability-doctor
