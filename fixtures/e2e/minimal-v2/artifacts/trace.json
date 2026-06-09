@@ -1,0 +1,11 @@
+{
+  "kind": "swarm.discussion_trace",
+  "discussion": {
+    "id": "minimal-v2"
+  },
+  "health": "on-track",
+  "nextAction": {
+    "kind": "none"
+  },
+  "note": "Static fixture anchor. Regenerate with: swarm-rt trace --dir fixtures/e2e/minimal-v2"
+}

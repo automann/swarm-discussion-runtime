@@ -266,3 +266,29 @@ Use this shape for every future implementation round:
 - Next: Build an end-to-end discussion fixture that includes host-step,
   capability, prompt, transport, WAL, trace, and evidence artifacts so the
   runtime can prove the smallest complete v2 discussion loop.
+
+## 2026-06-09 - Minimal V2 Loop Fixture
+
+- Commit: this commit.
+- Roadmap alignment: Cross-phase acceptance anchor after Phase 6. The fixture
+  proves the smallest artifact-backed runtime loop using the primitives already
+  implemented across prompt-build, host adapter, fan-in, WAL, capability,
+  trace, and evidence.
+- Work summary: Added `fixtures/e2e/minimal-v2/` with context summary,
+  prompt-build artifacts, Codex host-step metadata, transport fan-in artifacts,
+  capability profile and validated tool evidence, final WAL round, events,
+  synthesis, and static trace/evidence anchors. Added `validate-loop` as a thin
+  verifier for completed fixture directories.
+- Verification: `.venv/bin/python -m pytest` passed with the full test suite.
+- Failure coverage: Added tests rejecting missing host-step metadata and
+  non-citable tool evidence in the end-to-end loop. Existing trace/evidence and
+  capability failure tests remain active.
+- AgenTeam review: The loop validator mirrors AgenTeam's evidence posture: it
+  validates an artifact tree and references summaries rather than executing a
+  runner or embedding raw logs. It deliberately stays out of orchestration and
+  does not mutate discussion state.
+- Drift status: ON TRACK. The runtime now has a concrete fixture anchor that
+  should reduce future implementation drift during migration back to the plugin.
+- Next: Use the minimal v2 loop as the basis for designing the first real
+  adapter-facing smoke command or package boundary for the runtime/plugin
+  integration.

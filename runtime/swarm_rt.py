@@ -19,6 +19,7 @@ from swarm.capabilities import (
 )
 from swarm.collect import collect_merge
 from swarm.context import build_context_summary
+from swarm.loop import validate_minimal_loop
 from swarm.prompt import build_prompt
 from swarm.validation import validate_discussion_dir, validate_round_file
 from swarm.wal import append_message, checkpoint, finalize_round, resume_plan
@@ -159,6 +160,12 @@ def cmd_capability_doctor(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_validate_loop(args: argparse.Namespace) -> int:
+    result = validate_minimal_loop(args.discussion_dir)
+    emit(result)
+    return 0 if result["ok"] else 1
+
+
 def cmd_validate_round(args: argparse.Namespace) -> int:
     result = validate_round_file(args.round_path)
     emit(result)
@@ -252,6 +259,13 @@ def build_parser() -> argparse.ArgumentParser:
     capability.add_argument("--profile", type=Path, help="Capability profile JSON path")
     capability.add_argument("--tool-evidence", type=Path, help="Optional tool-evidence JSONL path")
     capability.set_defaults(func=cmd_capability_doctor)
+
+    validate_loop = sub.add_parser(
+        "validate-loop",
+        help="Validate the smallest complete v2 discussion artifact loop",
+    )
+    validate_loop.add_argument("discussion_dir", type=Path)
+    validate_loop.set_defaults(func=cmd_validate_loop)
 
     validate_round = sub.add_parser("validate-round", help="Validate one committed round JSON file")
     validate_round.add_argument("round_path", type=Path)

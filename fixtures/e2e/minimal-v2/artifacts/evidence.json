@@ -1,0 +1,38 @@
+{
+  "kind": "swarm.discussion_evidence",
+  "discussion": {
+    "id": "minimal-v2"
+  },
+  "outcome": {
+    "result": "completed"
+  },
+  "capabilities": {
+    "profile": {
+      "id": "expert-readonly"
+    },
+    "toolEvidence": {
+      "recordCount": 1,
+      "acceptedCount": 1,
+      "citable": true,
+      "accepted": [
+        {
+          "agentId": "agent-architect",
+          "tool": "read",
+          "artifactPath": "artifacts/read-001.json",
+          "summary": "Read the minimal v2 context summary."
+        }
+      ]
+    }
+  },
+  "artifacts": {
+    "paths": [
+      "capabilities/profile.json",
+      "capabilities/tool-evidence.jsonl",
+      "capabilities/artifacts/read-001.json"
+    ]
+  },
+  "rawHostLogs": {
+    "required": false
+  },
+  "note": "Static fixture anchor. Regenerate with: swarm-rt evidence --dir fixtures/e2e/minimal-v2"
+}
