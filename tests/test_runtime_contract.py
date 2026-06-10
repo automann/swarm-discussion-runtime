@@ -116,3 +116,47 @@ def test_runtime_contract_schema_documents_boundary_sections() -> None:
     assert "boundaries" in schema["required"]
     assert "integrationGates" in schema["required"]
     assert "stableArtifacts" in schema["required"]
+
+
+def test_contract_rejects_string_responsibilities_instead_of_char_splitting() -> None:
+    contract = load_contract()
+    contract["commands"]["prompt-build"]["responsibilities"] = "spawn-host-agents"
+
+    result = validate_runtime_contract(contract)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_list" for error in result["errors"])
+
+
+def test_contract_requires_top_level_forbidden_runtime_responsibilities() -> None:
+    contract = load_contract()
+    del contract["forbiddenRuntimeResponsibilities"]
+
+    result = validate_runtime_contract(contract)
+
+    assert result["ok"] is False
+    codes = {error["code"] for error in result["errors"]}
+    assert "missing_forbidden_responsibility" in codes
+
+
+def test_contract_requires_command_spec_flags() -> None:
+    contract = load_contract()
+    del contract["commands"]["trace"]["adapterFacing"]
+    del contract["commands"]["trace"]["mutatesState"]
+
+    result = validate_runtime_contract(contract)
+
+    assert result["ok"] is False
+    paths = {error["path"] for error in result["errors"]}
+    assert "commands.trace.adapterFacing" in paths
+    assert "commands.trace.mutatesState" in paths
+
+
+def test_contract_rejects_adapter_facing_flag_drift() -> None:
+    contract = load_contract()
+    contract["commands"]["prompt-build"]["adapterFacing"] = True
+
+    result = validate_runtime_contract(contract)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "adapter_facing_mismatch" for error in result["errors"])

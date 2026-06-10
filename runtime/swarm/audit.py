@@ -70,6 +70,22 @@ def _manifest_summary(discussion_dir: Path) -> tuple[dict[str, Any], list[dict[s
     return manifest, []
 
 
+def _round_value(payload: dict[str, Any], path: Path) -> Any:
+    for key in ("roundId", "round"):
+        value = payload.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    stem = path.name.split(".")[0]
+    return int(stem) if stem.isdigit() else payload.get("roundId")
+
+
+def _round_sort_key(item: dict[str, Any]) -> tuple[int, str, str]:
+    value = item.get("round")
+    if isinstance(value, bool) or not isinstance(value, int):
+        return (0, str(value), item.get("source", ""))
+    return (value, "", item.get("source", ""))
+
+
 def _round_summary(discussion_dir: Path) -> dict[str, Any]:
     rounds_dir = discussion_dir / "rounds"
     final_paths = sorted(rounds_dir.glob("[0-9][0-9][0-9].json")) if rounds_dir.exists() else []
@@ -81,7 +97,7 @@ def _round_summary(discussion_dir: Path) -> dict[str, Any]:
             validation = validate_round_file(path)
             rounds.append(
                 {
-                    "round": payload.get("roundId") or int(path.name.split(".")[0]),
+                    "round": _round_value(payload, path),
                     "source": "final",
                     "path": str(path),
                     "messageCount": len(payload.get("messages", []) or []),
@@ -95,7 +111,7 @@ def _round_summary(discussion_dir: Path) -> dict[str, Any]:
         if isinstance(payload, dict):
             rounds.append(
                 {
-                    "round": payload.get("roundId") or payload.get("round") or int(path.name.split(".")[0]),
+                    "round": _round_value(payload, path),
                     "source": "partial",
                     "path": str(path),
                     "phase": payload.get("phase"),
@@ -107,7 +123,7 @@ def _round_summary(discussion_dir: Path) -> dict[str, Any]:
     return {
         "finalCount": len(final_paths),
         "partialCount": len(partial_paths),
-        "rounds": sorted(rounds, key=lambda item: (int(item.get("round") or 0), item.get("source", ""))),
+        "rounds": sorted(rounds, key=_round_sort_key),
     }
 
 
@@ -158,13 +174,16 @@ def _transport_summary(discussion_dir: Path) -> dict[str, Any]:
         wait_batch_count += len(batches)
         errors.extend(batch_errors)
 
+    unreadable_collect_results = 0
     for path in collect_paths:
         payload, error = _load_json(path)
         if error:
             errors.append(error)
+            unreadable_collect_results += 1
             continue
         if not isinstance(payload, dict):
             errors.append(_issue("invalid_collect_result", str(path), "collect result must be an object"))
+            unreadable_collect_results += 1
             continue
         collect_results.append(
             {
@@ -178,8 +197,11 @@ def _transport_summary(discussion_dir: Path) -> dict[str, Any]:
             }
         )
 
-    complete = all(item["complete"] and item["ok"] and not item["timedOut"] for item in collect_results)
-    complete = complete if collect_results else False
+    complete = (
+        bool(collect_results)
+        and unreadable_collect_results == 0
+        and all(item["complete"] and item["ok"] and not item["timedOut"] for item in collect_results)
+    )
     return {
         "spawnOrderCount": len(spawn_paths),
         "waitBatchCount": wait_batch_count,
@@ -317,6 +339,20 @@ def _next_action(
             "missingAgentIds": incomplete_collect.get("missingAgentIds", []),
         }
 
+    if transport.get("errors"):
+        return {
+            "kind": "inspect_artifacts",
+            "command": "swarm-rt adapter-smoke --dir <discussion-dir>",
+            "reason": "transport artifacts are unreadable",
+        }
+
+    if not resume.get("ok", True):
+        return {
+            "kind": "inspect_artifacts",
+            "command": "swarm-rt resume-plan --dir <discussion-dir>",
+            "reason": "WAL state is unreadable",
+        }
+
     if resume.get("source") == "partial":
         return {
             "kind": "resume_round",
@@ -350,6 +386,8 @@ def _health(
     capabilities: dict[str, Any],
 ) -> str:
     if not validation.get("ok", False):
+        return "off-track"
+    if not resume.get("ok", True):
         return "off-track"
     if not capabilities.get("ok", True):
         return "at-risk"
@@ -400,12 +438,8 @@ def build_trace(discussion_dir: Path) -> dict[str, Any]:
             "errors": [_issue("invalid_directory", str(discussion_dir), "discussion path is not a directory")],
         }
 
-    manifest, manifest_errors = _manifest_summary(discussion_dir)
+    manifest, _manifest_errors = _manifest_summary(discussion_dir)
     validation = validate_discussion_dir(discussion_dir)
-    if manifest_errors:
-        validation = dict(validation)
-        validation["ok"] = False
-        validation["errors"] = [*validation.get("errors", []), *manifest_errors]
 
     resume = resume_plan(discussion_dir)
     validation = _relax_validation_for_partial(validation, resume)
@@ -452,6 +486,15 @@ def _outcome(trace: dict[str, Any]) -> dict[str, Any]:
         return {"result": "incomplete", "determinedBy": "transport", "reason": "transport incomplete", "nextAction": action}
     if action.get("kind") == "resume_round":
         return {"result": "incomplete", "determinedBy": "wal", "reason": "partial round present", "nextAction": action}
+    if action.get("kind") == "inspect_capabilities":
+        return {
+            "result": "unverified",
+            "determinedBy": "capabilities",
+            "reason": action.get("reason"),
+            "nextAction": action,
+        }
+    if action.get("kind") == "inspect_artifacts":
+        return {"result": "unverified", "determinedBy": "trace", "reason": action.get("reason"), "nextAction": action}
     return {"result": status or "unknown", "determinedBy": "trace", "reason": action.get("reason"), "nextAction": action}
 
 
@@ -543,9 +586,14 @@ def build_evidence(discussion_dir: Path) -> dict[str, Any]:
             "nextAction": trace["nextAction"],
         },
         "artifacts": trace["artifacts"],
-        "rawHostLogs": {
-            "required": False,
-            "present": bool(list(discussion_dir.glob("host-logs/**/*"))) if discussion_dir.exists() else False,
-            "paths": [str(path) for path in sorted(discussion_dir.glob("host-logs/**/*")) if path.is_file()],
-        },
+        "rawHostLogs": _raw_host_logs(discussion_dir),
     }
+
+
+def _raw_host_logs(discussion_dir: Path) -> dict[str, Any]:
+    paths = (
+        [str(path) for path in sorted(discussion_dir.glob("host-logs/**/*")) if path.is_file()]
+        if discussion_dir.exists()
+        else []
+    )
+    return {"required": False, "present": bool(paths), "paths": paths}

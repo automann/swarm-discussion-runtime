@@ -158,6 +158,97 @@ def test_collect_merge_rejects_ambiguous_name_fallback_matches() -> None:
     assert any(error["code"] == "ambiguous_fallback_match" for error in result["errors"])
 
 
+def test_collect_merge_does_not_reuse_one_agent_payload_for_two_specs() -> None:
+    result = collect_merge(
+        [
+            {"agentId": "agent-a", "persona": "architect"},
+            {"agentId": "agent-missing", "persona": "architect"},
+        ],
+        [
+            {
+                "status": {
+                    "agent-a": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"only one reply\"}"
+                    }
+                },
+                "timed_out": False,
+            }
+        ],
+    )
+
+    assert result["ok"] is False
+    assert result["complete"] is False
+    assert result["missingAgentIds"] == ["agent-missing"]
+    assert [item["agentId"] for item in result["results"]] == ["agent-a"]
+
+
+def test_collect_merge_fallback_matches_are_consumed_once() -> None:
+    result = collect_merge(
+        [
+            {"agentId": "missing-1", "persona": "architect"},
+            {"agentId": "missing-2", "persona": "architect"},
+        ],
+        [
+            {
+                "status": {
+                    "agent-a": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"single reply\"}"
+                    }
+                },
+                "timed_out": False,
+            }
+        ],
+    )
+
+    assert result["complete"] is False
+    assert result["missingAgentIds"] == ["missing-2"]
+    assert [item["agentId"] for item in result["results"]] == ["agent-a"]
+
+
+def test_collect_merge_flags_conflicting_completed_payloads_across_batches() -> None:
+    result = collect_merge(
+        [{"agentId": "agent-a", "persona": "architect"}],
+        [
+            {
+                "status": {
+                    "agent-a": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"first\"}"
+                    }
+                },
+                "timed_out": False,
+            },
+            {
+                "status": {
+                    "agent-a": {
+                        "completed": "{\"name\":\"architect\",\"claim\":\"second\"}"
+                    }
+                },
+                "timed_out": False,
+            },
+        ],
+    )
+
+    assert result["ok"] is False
+    assert any(error["code"] == "conflicting_completed_payload" for error in result["errors"])
+
+
+def test_collect_merge_reports_still_running_agents_as_missing() -> None:
+    result = collect_merge(
+        [{"agentId": "agent-a", "persona": "architect"}],
+        [
+            {
+                "status": {"agent-a": {"running": True}},
+                "timed_out": False,
+            }
+        ],
+    )
+
+    assert result["ok"] is False
+    assert result["complete"] is False
+    assert result["missingAgentIds"] == ["agent-a"]
+    assert not any(error["code"] == "invalid_completed_payload" for error in result["errors"])
+
+
 def test_collect_merge_marks_timed_out_batches_not_ok_even_when_results_are_complete() -> None:
     result = collect_merge(
         [{"agentId": "agent-a", "persona": "architect"}],
@@ -176,3 +267,36 @@ def test_collect_merge_marks_timed_out_batches_not_ok_even_when_results_are_comp
     assert result["complete"] is True
     assert result["timedOut"] is True
     assert result["ok"] is False
+
+
+def test_collect_merge_cli_reports_corrupt_input_as_structured_error(tmp_path: Path) -> None:
+    bad_spawn = tmp_path / "spawn-order.json"
+    bad_spawn.write_text("{not json")
+
+    result = run_cli(
+        "collect-merge",
+        "--spawn-order",
+        str(bad_spawn),
+        "--wait-result",
+        str(FIXTURES / "wait-partial-1.json"),
+    )
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert any(error["code"] == "invalid_json" for error in payload["errors"])
+    assert "Traceback" not in result.stderr
+
+
+def test_collect_merge_cli_reports_missing_input_as_structured_error(tmp_path: Path) -> None:
+    result = run_cli(
+        "collect-merge",
+        "--spawn-order",
+        str(tmp_path / "does-not-exist.json"),
+        "--wait-result",
+        str(FIXTURES / "wait-partial-1.json"),
+    )
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert any(error["code"] == "missing_file" for error in payload["errors"])

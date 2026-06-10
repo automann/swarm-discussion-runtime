@@ -64,6 +64,33 @@ def _require_mapping(value: Any, path: str, errors: list[dict[str, Any]]) -> dic
     return value
 
 
+def _valid_relative_path(value: str) -> bool:
+    if "\\" in value:
+        return False
+    parts = value.split("/")
+    return all(part not in ("", ".", "..") for part in parts)
+
+
+def _require_relative_path(
+    mapping: dict[str, Any],
+    field: str,
+    path: str,
+    errors: list[dict[str, Any]],
+) -> None:
+    value = mapping.get(field)
+    if not isinstance(value, str) or not value.strip():
+        return
+    if not _valid_relative_path(value):
+        errors.append(
+            _issue(
+                "invalid_artifact_path",
+                f"{path}.{field}",
+                "artifact path must stay relative inside the discussion directory",
+                value,
+            )
+        )
+
+
 def _require_non_empty_string(
     mapping: dict[str, Any],
     field: str,
@@ -135,7 +162,7 @@ def validate_host_transport_metadata(payload: Any) -> dict[str, Any]:
     discussion_id = _require_non_empty_string(packet, "discussionId", "hostStep", errors)
 
     parent_context = _require_mapping(packet.get("parentContext"), "hostStep.parentContext", errors)
-    if parent_context:
+    if isinstance(packet.get("parentContext"), dict):
         extra_keys = sorted(set(parent_context) - ALLOWED_PARENT_CONTEXT_KEYS)
         for key in extra_keys:
             code = "forbidden_parent_context" if key in FORBIDDEN_PARENT_CONTEXT_KEYS else "unknown_parent_context"
@@ -178,14 +205,14 @@ def validate_host_transport_metadata(payload: Any) -> dict[str, Any]:
             )
 
     runtime_commands = _require_mapping(packet.get("runtimeCommands"), "hostStep.runtimeCommands", errors)
-    if runtime_commands:
+    if isinstance(packet.get("runtimeCommands"), dict):
         for field in sorted(REQUIRED_RUNTIME_COMMANDS - set(runtime_commands)):
             errors.append(_issue("missing_field", f"hostStep.runtimeCommands.{field}", "required command is missing"))
         for field in sorted(REQUIRED_RUNTIME_COMMANDS & set(runtime_commands)):
             _require_non_empty_string(runtime_commands, field, "hostStep.runtimeCommands", errors)
 
     transport = _require_mapping(packet.get("transport"), "hostStep.transport", errors)
-    if transport:
+    if isinstance(packet.get("transport"), dict):
         for field in sorted(REQUIRED_TRANSPORT_FIELDS - set(transport)):
             errors.append(_issue("missing_field", f"hostStep.transport.{field}", "required field is missing"))
         for field in sorted(REQUIRED_TRANSPORT_FIELDS & set(transport)):
@@ -211,11 +238,13 @@ def validate_host_transport_metadata(payload: Any) -> dict[str, Any]:
             )
 
     artifacts = _require_mapping(packet.get("artifacts"), "hostStep.artifacts", errors)
-    if artifacts:
+    if isinstance(packet.get("artifacts"), dict):
         for field in sorted(REQUIRED_ARTIFACT_FIELDS - set(artifacts)):
             errors.append(_issue("missing_field", f"hostStep.artifacts.{field}", "required artifact path is missing"))
         for field in sorted(REQUIRED_ARTIFACT_FIELDS & set(artifacts)):
             _require_non_empty_string(artifacts, field, "hostStep.artifacts", errors)
+        for field in sorted(artifacts):
+            _require_relative_path(artifacts, field, "hostStep.artifacts", errors)
 
     summary = {
         "schemaVersion": schema_version,

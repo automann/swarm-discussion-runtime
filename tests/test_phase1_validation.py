@@ -116,6 +116,120 @@ def test_validate_round_rejects_shift_triggers_not_visible_in_full() -> None:
     assert any(error["code"] == "shift_trigger_not_visible" for error in result["errors"])
 
 
+def test_validate_round_rejects_unhashable_reference_target_without_crashing() -> None:
+    record = json.loads(ROUND.read_text())
+    record["messages"][1]["references"][0]["targetId"] = {"oops": 1}
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "unresolved_reference" for error in result["errors"])
+
+
+def test_validate_round_rejects_unhashable_edge_endpoint_without_crashing() -> None:
+    record = json.loads(ROUND.read_text())
+    record["argumentGraph"][0]["to"] = ["r1-msg-001"]
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "unresolved_edge" for error in result["errors"])
+
+
+def test_validate_round_rejects_shift_without_any_trigger() -> None:
+    record = json.loads(ROUND.read_text())
+    record["positionShifts"] = [
+        {
+            "type": "position_shift",
+            "expert": "maintainer",
+            "from": "mixed",
+            "to": "formatter-defined",
+            "reasoning": "Changed mind with no cited trigger.",
+        }
+    ]
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "missing_shift_trigger" for error in result["errors"])
+
+
+def test_validate_round_rejects_shift_with_unhashable_trigger_without_crashing() -> None:
+    record = json.loads(ROUND.read_text())
+    record["positionShifts"] = [
+        {
+            "type": "position_shift",
+            "expert": "maintainer",
+            "trigger": [["r1-msg-001"]],
+            "reasoning": "Trigger is a nested list.",
+        }
+    ]
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "unresolved_shift_trigger" for error in result["errors"])
+
+
+def test_validate_round_rejects_shift_without_expert() -> None:
+    record = json.loads(ROUND.read_text())
+    record["positionShifts"] = [
+        {
+            "type": "position_shift",
+            "trigger": ["r1-msg-001"],
+            "reasoning": "No expert named.",
+        }
+    ]
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_shift_expert" for error in result["errors"])
+
+
+def test_validate_round_rejects_shift_when_persona_context_log_is_empty() -> None:
+    record = json.loads(ROUND.read_text())
+    record["positionShifts"] = [
+        {
+            "type": "position_shift",
+            "expert": "maintainer",
+            "trigger": ["r1-msg-001"],
+            "reasoning": "Log is empty so provenance cannot be proven.",
+        }
+    ]
+    record["personaContextLog"] = {}
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "shift_provenance_unverifiable" for error in result["errors"])
+
+
+def test_validate_round_rejects_null_container_fields_instead_of_coercing() -> None:
+    record = json.loads(ROUND.read_text())
+    record["messages"] = None
+    record["argumentGraph"] = None
+    record["positionShifts"] = None
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    codes = {error["code"] for error in result["errors"]}
+    assert {"invalid_messages", "invalid_argument_graph", "invalid_position_shifts"} <= codes
+
+
+def test_validate_round_rejects_null_references_instead_of_coercing() -> None:
+    record = json.loads(ROUND.read_text())
+    record["messages"][1]["references"] = None
+    record["argumentGraph"] = []
+    record["metadata"]["referenceCount"] = 0
+
+    result = validate_round_record(record)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_references" for error in result["errors"])
+
+
 def test_validate_round_cli_rejects_relation_enum_violations(tmp_path: Path) -> None:
     record = json.loads(ROUND.read_text())
     record["messages"][1]["references"][0]["relation"] = "agrees"
@@ -192,3 +306,23 @@ def test_validate_discussion_catches_missing_artifact_for_completed_discussion(t
 
     assert result["ok"] is False
     assert any(error["code"] == "missing_artifact" for error in result["errors"])
+
+
+def test_validate_discussion_catches_round_file_name_round_id_mismatch(tmp_path: Path) -> None:
+    discussion = copy_discussion(tmp_path)
+    record = json.loads((discussion / "rounds" / "001.json").read_text())
+    record["roundId"] = 2
+    for index, message in enumerate(record["messages"], start=1):
+        message["id"] = f"r2-msg-{index:03d}"
+    for message in record["messages"]:
+        for ref in message["references"]:
+            ref["targetId"] = ref["targetId"].replace("r1-", "r2-")
+    for edge in record["argumentGraph"]:
+        edge["from"] = edge["from"].replace("r1-", "r2-")
+        edge["to"] = edge["to"].replace("r1-", "r2-")
+    (discussion / "rounds" / "001.json").write_text(json.dumps(record))
+
+    result = validate_discussion_dir(discussion)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "round_file_mismatch" for error in result["errors"])

@@ -106,3 +106,49 @@ def test_adapter_smoke_cli_fails_for_missing_host_step(tmp_path: Path) -> None:
     assert result.returncode == 1
     payload = json.loads(result.stdout)
     assert any(error["code"] == "missing_host_step" for error in payload["errors"])
+
+
+def test_adapter_smoke_flags_empty_stored_collect_result_as_replay_mismatch(tmp_path: Path) -> None:
+    discussion = copy_fixture(tmp_path)
+    collect_result = discussion / "transport" / "r001" / "response" / "collect-result.json"
+    collect_result.write_text("{}")
+
+    result = adapter_smoke(discussion)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "collect_replay_mismatch" for error in result["errors"])
+
+
+def test_adapter_smoke_accepts_single_object_json_wait_result(tmp_path: Path) -> None:
+    discussion = copy_fixture(tmp_path)
+    transport_dir = discussion / "transport" / "r001" / "response"
+    batches = [
+        json.loads(line)
+        for line in (transport_dir / "wait-batches.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    assert len(batches) == 1
+    (transport_dir / "wait-result.json").write_text(json.dumps(batches[0]))
+    host_step = json.loads((transport_dir / "host-step.json").read_text())
+    host_step["artifacts"]["waitBatchesPath"] = "transport/r001/response/wait-result.json"
+    (transport_dir / "host-step.json").write_text(json.dumps(host_step))
+
+    result = adapter_smoke(discussion)
+
+    assert not any(error["code"] == "invalid_wait_result" for error in result["errors"]), result["errors"]
+    assert result["summary"]["transportReplayOk"] is True
+
+
+def test_adapter_smoke_rejects_traversal_artifact_path_without_reading_it(tmp_path: Path) -> None:
+    discussion = copy_fixture(tmp_path)
+    transport_dir = discussion / "transport" / "r001" / "response"
+    host_step = json.loads((transport_dir / "host-step.json").read_text())
+    host_step["artifacts"]["spawnOrderPath"] = "../outside-spawn-order.json"
+    (transport_dir / "host-step.json").write_text(json.dumps(host_step))
+    (tmp_path / "outside-spawn-order.json").write_text("[]")
+
+    result = adapter_smoke(discussion)
+
+    assert result["ok"] is False
+    codes = {error["code"] for error in result["errors"]}
+    assert "invalid_artifact_path" in codes

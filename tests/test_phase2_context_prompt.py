@@ -147,3 +147,24 @@ def test_prompt_build_schema_documents_auditable_visibility_contract() -> None:
         "full",
         "gist",
     ]
+
+
+def test_prompt_build_reports_unreadable_context_summary_instead_of_crashing(tmp_path: Path) -> None:
+    request = load_json(REQUESTS / "response.json")
+    del request["contextSummary"]
+    request["contextSummaryPath"] = str(tmp_path)
+
+    result = build_prompt(request)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "unreadable_context_summary" for error in result["errors"])
+
+
+def test_prompt_build_rejects_boolean_visibility_budget() -> None:
+    request = load_json(REQUESTS / "response.json")
+    request["visibilityBudget"] = True
+
+    result = build_prompt(request, base_dir=REQUESTS)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_visibility_budget" for error in result["errors"])

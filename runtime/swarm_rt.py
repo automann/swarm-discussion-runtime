@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,6 @@ from swarm.capabilities import (
     capability_doctor_report,
     default_profile_path,
     load_jsonl,
-    load_json as load_profile_json,
 )
 from swarm.collect import collect_merge
 from swarm.contract import load_runtime_contract, validate_runtime_contract
@@ -56,18 +56,55 @@ def cmd_runtime_contract(args: argparse.Namespace) -> int:
     return 0 if validation["ok"] else 1
 
 
+class CliInputError(Exception):
+    """Structured input failure surfaced as a JSON error result."""
+
+    def __init__(self, issue: dict[str, Any]) -> None:
+        super().__init__(issue.get("message", "invalid input"))
+        self.issue = issue
+
+
 def load_json(path: Path) -> Any:
-    return json.loads(path.read_text())
+    try:
+        return json.loads(path.read_text())
+    except FileNotFoundError as exc:
+        raise CliInputError({"code": "missing_file", "path": str(path), "message": f"missing file: {path}"}) from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        raise CliInputError({"code": "unreadable_file", "path": str(path), "message": f"cannot read file: {exc}"}) from exc
+    except json.JSONDecodeError as exc:
+        raise CliInputError({"code": "invalid_json", "path": str(path), "message": f"invalid JSON: {exc}"}) from exc
 
 
 def load_wait_result_batches(path: Path) -> list[Any]:
-    text = path.read_text()
+    try:
+        text = path.read_text()
+    except FileNotFoundError as exc:
+        raise CliInputError({"code": "missing_file", "path": str(path), "message": f"missing file: {path}"}) from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        raise CliInputError({"code": "unreadable_file", "path": str(path), "message": f"cannot read file: {exc}"}) from exc
     if path.suffix != ".jsonl":
         try:
             return [json.loads(text)]
         except json.JSONDecodeError:
             pass
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
+    batches: list[Any] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            batches.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            raise CliInputError(
+                {"code": "invalid_jsonl", "path": f"{path}:{line_number}", "message": f"invalid JSONL: {exc}"}
+            ) from exc
+    return batches
+
+
+def write_text_atomic(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp_path.write_text(text)
+    os.replace(tmp_path, path)
 
 
 def cmd_collect_merge(args: argparse.Namespace) -> int:
@@ -84,8 +121,7 @@ def cmd_context_build(args: argparse.Namespace) -> int:
     brief = load_json(args.brief)
     result = build_context_summary(brief)
     if result["ok"] and args.out:
-        args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(result["summaryMarkdown"])
+        write_text_atomic(args.out, result["summaryMarkdown"])
         result["summaryPath"] = str(args.out)
     emit(result)
     return 0 if result["ok"] else 1
@@ -95,11 +131,10 @@ def cmd_prompt_build(args: argparse.Namespace) -> int:
     request = load_json(args.request)
     result = build_prompt(request, base_dir=args.request.parent)
     if result["ok"] and args.out_dir:
-        args.out_dir.mkdir(parents=True, exist_ok=True)
         prompt_path = args.out_dir / "prompt.txt"
         artifact_path = args.out_dir / "prompt-build.json"
-        prompt_path.write_text(result["prompt"])
-        artifact_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+        write_text_atomic(prompt_path, result["prompt"])
+        write_text_atomic(artifact_path, json.dumps(result, indent=2, sort_keys=True) + "\n")
         result["artifactPaths"] = {
             "prompt": str(prompt_path),
             "promptBuild": str(artifact_path),
@@ -134,6 +169,8 @@ def cmd_resume_plan(args: argparse.Namespace) -> int:
 
 def cmd_trace(args: argparse.Namespace) -> int:
     result = build_trace(args.dir)
+    if args.output:
+        write_text_atomic(args.output, json.dumps(result, indent=2, sort_keys=True) + "\n")
     emit(result)
     return 0 if result["ok"] else 1
 
@@ -141,8 +178,7 @@ def cmd_trace(args: argparse.Namespace) -> int:
 def cmd_evidence(args: argparse.Namespace) -> int:
     result = build_evidence(args.dir)
     if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+        write_text_atomic(args.output, json.dumps(result, indent=2, sort_keys=True) + "\n")
     emit(result)
     return 0 if result["ok"] else 1
 
@@ -182,11 +218,15 @@ def cmd_transport_collect(args: argparse.Namespace) -> int:
 
 def cmd_capability_doctor(args: argparse.Namespace) -> int:
     profile_path = args.profile or default_profile_path()
-    profile = load_profile_json(profile_path)
+    profile = load_json(profile_path)
     records = None
     evidence_base_dir = None
     errors: list[dict[str, Any]] = []
     if args.tool_evidence:
+        if not args.tool_evidence.exists():
+            raise CliInputError(
+                {"code": "missing_file", "path": str(args.tool_evidence), "message": f"missing file: {args.tool_evidence}"}
+            )
         records, errors = load_jsonl(args.tool_evidence)
         evidence_base_dir = args.tool_evidence.parent
     result = capability_doctor_report(profile, records, tool_evidence_base_dir=evidence_base_dir)
@@ -285,6 +325,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     trace = sub.add_parser("trace", help="Build a diagnostic discussion artifact trace")
     trace.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    trace.add_argument("--output", type=Path, help="Optional trace JSON output path")
     trace.set_defaults(func=cmd_trace)
 
     evidence = sub.add_parser("evidence", help="Build portable discussion evidence")
@@ -371,7 +412,25 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except CliInputError as exc:
+        emit({"ok": False, "errors": [exc.issue]})
+        return 1
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        emit(
+            {
+                "ok": False,
+                "errors": [
+                    {
+                        "code": "invalid_input",
+                        "path": str(getattr(exc, "filename", "") or ""),
+                        "message": str(exc),
+                    }
+                ],
+            }
+        )
+        return 1
 
 
 if __name__ == "__main__":

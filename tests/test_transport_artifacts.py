@@ -188,3 +188,65 @@ def test_transport_collect_writes_incomplete_result_for_partial_batches(tmp_path
     assert result["result"]["complete"] is False
     assert result["result"]["missingAgentIds"] == ["agent-contrarian"]
     assert (discussion_dir / "transport" / "r001" / "response" / "collect-result.json").exists()
+
+
+def test_transport_init_rejects_phase_with_trailing_newline(tmp_path: Path) -> None:
+    discussion_dir = tmp_path / "discussion"
+
+    result = write_transport_step(discussion_dir, "codex", "disc-1", 1, "response\n", spawn_order())
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_phase" for error in result["errors"])
+    assert not (discussion_dir / "transport").exists()
+
+
+def test_transport_collect_reports_corrupt_spawn_order_instead_of_crashing(tmp_path: Path) -> None:
+    discussion_dir = tmp_path / "discussion"
+    assert write_transport_step(discussion_dir, "codex", "disc-1", 1, "response", spawn_order())["ok"]
+    assert append_wait_batch(discussion_dir, 1, "response", wait_batch())["ok"]
+    (discussion_dir / "transport" / "r001" / "response" / "spawn-order.json").write_text("{not json")
+
+    result = collect_transport_step(discussion_dir, 1, "response")
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_json" for error in result["errors"])
+    assert not (discussion_dir / "transport" / "r001" / "response" / "collect-result.json").exists()
+
+
+def test_transport_collect_reports_corrupt_wait_batch_line_instead_of_crashing(tmp_path: Path) -> None:
+    discussion_dir = tmp_path / "discussion"
+    assert write_transport_step(discussion_dir, "codex", "disc-1", 1, "response", spawn_order())["ok"]
+    assert append_wait_batch(discussion_dir, 1, "response", wait_batch())["ok"]
+    wait_path = discussion_dir / "transport" / "r001" / "response" / "wait-batches.jsonl"
+    with wait_path.open("a") as handle:
+        handle.write("{corrupt line\n")
+
+    result = collect_transport_step(discussion_dir, 1, "response")
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_jsonl" for error in result["errors"])
+
+
+def test_transport_init_refuses_new_spawn_order_while_wait_batches_exist(tmp_path: Path) -> None:
+    discussion_dir = tmp_path / "discussion"
+    assert write_transport_step(discussion_dir, "codex", "disc-1", 1, "response", spawn_order())["ok"]
+    assert append_wait_batch(discussion_dir, 1, "response", wait_batch())["ok"]
+    changed = spawn_order()
+    changed[0]["agentId"] = "agent-replacement"
+
+    result = write_transport_step(discussion_dir, "codex", "disc-1", 1, "response", changed)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "stale_wait_batches" for error in result["errors"])
+    stored = json.loads((discussion_dir / "transport" / "r001" / "response" / "spawn-order.json").read_text())
+    assert stored == spawn_order()
+
+
+def test_transport_init_allows_idempotent_rerun_with_same_spawn_order(tmp_path: Path) -> None:
+    discussion_dir = tmp_path / "discussion"
+    assert write_transport_step(discussion_dir, "codex", "disc-1", 1, "response", spawn_order())["ok"]
+    assert append_wait_batch(discussion_dir, 1, "response", wait_batch())["ok"]
+
+    result = write_transport_step(discussion_dir, "codex", "disc-1", 1, "response", spawn_order())
+
+    assert result["ok"] is True

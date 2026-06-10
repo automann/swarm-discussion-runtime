@@ -58,24 +58,33 @@ Initial planned command surface:
 
 ```text
 swarm-rt health
+swarm-rt planned-commands
+swarm-rt runtime-contract
 swarm-rt init
 swarm-rt context-build
 swarm-rt persona-plan
 swarm-rt prompt-build
 swarm-rt collect-merge
+swarm-rt transport-init
+swarm-rt transport-append-batch
+swarm-rt transport-collect
 swarm-rt append-message
 swarm-rt checkpoint
 swarm-rt finalize-round
 swarm-rt resume-plan
 swarm-rt validate-round
 swarm-rt validate-discussion
+swarm-rt validate-host-step
+swarm-rt capability-doctor
+swarm-rt validate-loop
+swarm-rt adapter-smoke
 swarm-rt trace
 swarm-rt evidence
 ```
 
-Commands are added behind tests and fixtures. `init`, `persona-plan`, and
-future host-adapter commands remain planned until their runtime contracts are
-proven.
+Commands are added behind tests and fixtures. `init` and `persona-plan` remain
+planned until their runtime contracts are proven; everything else above is
+implemented.
 
 ## Artifact Shape
 
@@ -84,16 +93,19 @@ Target discussion directory:
 ```text
 .swarm/discussions/<id>/
   manifest.json
-  state.json
+  progress.md
   events.jsonl
   context/summary.md
   rounds/001.json.partial
   rounds/001.json
   prompts/r001/<phase>/<persona>/prompt-build.json
   prompts/r001/<phase>/<persona>/prompt.txt
+  transport/r001/<phase>/host-step.json
   transport/r001/<phase>/spawn-order.json
   transport/r001/<phase>/wait-batches.jsonl
   transport/r001/<phase>/collect-result.json
+  capabilities/profile.json
+  capabilities/tool-evidence.jsonl
   artifacts/trace.json
   artifacts/evidence.json
   artifacts/synthesis.md

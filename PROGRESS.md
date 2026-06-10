@@ -365,3 +365,70 @@ Use this shape for every future implementation round:
   plugin prompts have less room to reintroduce ad hoc JSON handling.
 - Next: Vendor these runtime changes into the Codex plugin wrapper and replace
   skill instructions that ask the parent agent to write transport files by hand.
+
+## 2026-06-10 - Full-Repo Review Hardening Round
+
+- Commit: this commit.
+- Roadmap alignment: Cross-phase hardening against the Phase 1-6 acceptance
+  invariants plus the Phase 3 round-monotonicity item that had no enforcement.
+- Work summary: A full review against ROADMAP/ACCEPTANCE found and fixed
+  verified invariant violations across the runtime. Fan-in: the persona
+  fallback matcher could assign one agent's payload to two specs and report a
+  fan-in complete while a required agent never responded; fallback matches are
+  now consumed once, conflicting duplicate payloads are flagged, and
+  still-running agents count as missing. WAL: `checkpoint` could resurrect a
+  finalized round (then `append-message` wrote into committed state and
+  `resume-plan` chose the stale partial); writes now refuse finalized rounds,
+  reject state/round-id mismatches, enforce sequential round ids, survive
+  corrupt state files with structured errors, and mint message ids correctly
+  past sequence 999. Validation: position shifts must cite at least one
+  trigger, name their expert, and be provable against a non-empty
+  personaContextLog; unhashable JSON values no longer crash validators; null
+  container fields error instead of silently coercing; round file names must
+  match their roundId. Host adapter: empty `{}` sections no longer bypass
+  host-step validation, and artifact paths must stay relative inside the
+  discussion directory (checked again at smoke-replay resolution). Smoke: fixed
+  an operator-precedence bug that failed all single-object `.json` wait
+  results, and an empty stored collect-result no longer skips the replay
+  comparison. Transport: corrupt artifacts produce structured errors,
+  re-initializing a phase with a different spawn order while wait batches exist
+  fails loudly, and the phase-name regex no longer accepts trailing newlines.
+  Audit: unreadable collect-results mark transport incomplete, capability-gate
+  failures report `outcome.result: unverified` instead of `completed`, manifest
+  errors are no longer double-reported, and trace survives corrupt partials and
+  non-numeric round ids. Capabilities/contract: profile errors are not
+  double-counted, records under an invalid profile are not reported accepted,
+  schema-required profile fields are enforced, command-spec `responsibilities`
+  are type-checked (no more `set(str)` char-splitting bypass), and the
+  top-level `forbiddenRuntimeResponsibilities` list is validated. CLI: all
+  input loading emits structured JSON errors instead of tracebacks, artifact
+  outputs are written atomically, `trace` gained `--output` to honor the
+  contract's stable-artifact claim, and `planned-commands` lists itself.
+  Drift cleanup: minimal-v2 trace/evidence anchors are now real CLI output that
+  conforms to `schemas/evidence.schema.json`, `validate-loop` checks evidence
+  content instead of file existence, and ARCHITECTURE/README/fixtures docs
+  match the implemented command surface and artifact shape.
+- Verification: `.venv/bin/python -m pytest` passed with 155 tests (was 103).
+  Every README Quick Check command runs clean. A new end-to-end test drives the
+  documented CLI pipeline (`context-build -> transport-init -> prompt-build ->
+  transport-append-batch -> transport-collect -> append-message ->
+  finalize-round -> trace/evidence/validate-loop`) on a fresh directory.
+- Failure coverage: This round was failure coverage. 52 new pinning tests
+  cover double-assigned fan-in payloads, conflicting duplicate payloads,
+  checkpoint-after-finalize, round-id mismatches, non-sequential rounds,
+  corrupt WAL/transport/prompt inputs, message ids past 999, trigger-less and
+  expert-less shifts, empty context logs, unhashable reference targets, null
+  container coercion, empty host-step sections, traversal artifact paths, stale
+  wait batches, schema-incomplete evidence anchors, and CLI structured-error
+  output.
+- AgenTeam review: Strengthens exactly the disciplines this repo borrowed:
+  validators fail loudly with stable machine-readable codes instead of
+  crashing or silently repairing, WAL state transitions are now explicit and
+  guarded, and evidence summaries no longer misreport transport or capability
+  status. No role pipeline, executor, or packaging scope was added.
+- Drift status: ON TRACK. Remaining known gaps are external-input items, not
+  code: real legacy smoke fixtures are still absent, and the plugin-side
+  wrapper that calls the runtime has not been built.
+- Next: Import at least one real legacy discussion artifact as a fixture, then
+  build the plugin-side wrapper that drives one lightweight phase through these
+  primitives.

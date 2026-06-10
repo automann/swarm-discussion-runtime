@@ -13,7 +13,7 @@ from swarm.collect import collect_merge
 
 SCHEMA_VERSION = 1
 DEFAULT_COMMAND_PREFIX = "swarm-rt"
-PHASE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+PHASE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*\Z")
 
 
 def _issue(code: str, path: str, message: str, value: Any = None) -> dict[str, Any]:
@@ -215,6 +215,23 @@ def write_transport_step(
     if not validation["ok"]:
         return {"ok": False, "errors": validation["errors"], "paths": {key: str(value) for key, value in paths.items()}}
 
+    if paths["waitBatchesPath"].exists() and paths["waitBatchesPath"].read_text().strip():
+        existing_spawn_order, existing_issue = (
+            _load_json(paths["spawnOrderPath"]) if paths["spawnOrderPath"].exists() else (None, None)
+        )
+        if existing_issue is not None or existing_spawn_order != normalized_spawn_order:
+            return {
+                "ok": False,
+                "errors": [
+                    _issue(
+                        "stale_wait_batches",
+                        str(paths["waitBatchesPath"]),
+                        "wait batches exist from a previous spawn order; collect or clear them before re-initializing",
+                    )
+                ],
+                "paths": {key: str(value) for key, value in paths.items()},
+            }
+
     _write_json_atomic(paths["spawnOrderPath"], normalized_spawn_order)
     _write_json_atomic(paths["hostStepPath"], host_step)
     if not paths["waitBatchesPath"].exists():
@@ -252,37 +269,73 @@ def append_wait_batch(discussion_dir: Path, round_id: int, phase: str, wait_resu
     }
 
 
-def _load_json(path: Path) -> Any:
-    return json.loads(path.read_text())
+def _load_json(path: Path) -> tuple[Any, dict[str, Any] | None]:
+    try:
+        return json.loads(path.read_text()), None
+    except OSError as exc:
+        return None, _issue("unreadable_file", str(path), f"cannot read file: {exc}")
+    except json.JSONDecodeError as exc:
+        return None, _issue("invalid_json", str(path), f"invalid JSON: {exc}")
 
 
-def _load_wait_batches(path: Path) -> list[Any]:
+def _load_wait_batches(path: Path) -> tuple[list[Any], list[dict[str, Any]]]:
     if not path.exists():
-        return []
+        return [], []
     batches: list[Any] = []
-    for line in path.read_text().splitlines():
-        if line.strip():
+    issues: list[dict[str, Any]] = []
+    try:
+        text = path.read_text()
+    except OSError as exc:
+        return [], [_issue("unreadable_file", str(path), f"cannot read file: {exc}")]
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
             batches.append(json.loads(line))
-    return batches
+        except json.JSONDecodeError as exc:
+            issues.append(_issue("invalid_jsonl", f"{path}:{line_number}", f"invalid JSONL: {exc}"))
+    return batches, issues
 
 
 def collect_transport_step(discussion_dir: Path, round_id: int, phase: str) -> dict[str, Any]:
     paths = transport_paths(discussion_dir, round_id, phase)
     errors = _validate_step_inputs(None, None, round_id, phase, None, None)
-    if not paths["spawnOrderPath"].exists():
+    spawn_order: Any = None
+    if paths["spawnOrderPath"].exists():
+        spawn_order, spawn_issue = _load_json(paths["spawnOrderPath"])
+        if spawn_issue is not None:
+            errors.append(spawn_issue)
+        elif not isinstance(spawn_order, list):
+            errors.append(_issue("invalid_spawn_order", str(paths["spawnOrderPath"]), "spawn order must be a list"))
+            spawn_order = None
+    else:
         errors.append(_issue("missing_spawn_order", str(paths["spawnOrderPath"]), "spawn-order.json is missing"))
     if not paths["waitBatchesPath"].exists():
         errors.append(_issue("missing_wait_batches", str(paths["waitBatchesPath"]), "wait-batches.jsonl is missing"))
     host_step_validation = None
     if paths["hostStepPath"].exists():
-        host_step_validation = validate_host_transport_metadata(_load_json(paths["hostStepPath"]))
-        if not host_step_validation["ok"]:
-            errors.extend(host_step_validation["errors"])
+        host_step_payload, host_step_issue = _load_json(paths["hostStepPath"])
+        if host_step_issue is not None:
+            errors.append(host_step_issue)
+        else:
+            host_step_validation = validate_host_transport_metadata(host_step_payload)
+            if not host_step_validation["ok"]:
+                errors.extend(host_step_validation["errors"])
     else:
         errors.append(_issue("missing_host_step", str(paths["hostStepPath"]), "host-step.json is missing"))
+    wait_batches, wait_issues = _load_wait_batches(paths["waitBatchesPath"])
+    errors.extend(wait_issues)
     if errors:
-        blocking = {"missing_spawn_order", "missing_wait_batches", "invalid_phase", "invalid_round"}
-        if any(error["code"] in blocking for error in errors):
+        blocking = {
+            "missing_spawn_order",
+            "invalid_spawn_order",
+            "missing_wait_batches",
+            "invalid_phase",
+            "invalid_round",
+            "invalid_json",
+            "unreadable_file",
+        }
+        if spawn_order is None or any(error["code"] in blocking for error in errors):
             return {
                 "ok": False,
                 "errors": errors,
@@ -290,8 +343,6 @@ def collect_transport_step(discussion_dir: Path, round_id: int, phase: str) -> d
                 "hostStepValidation": host_step_validation,
             }
 
-    spawn_order = _load_json(paths["spawnOrderPath"])
-    wait_batches = _load_wait_batches(paths["waitBatchesPath"])
     result = collect_merge(spawn_order, wait_batches)
     _write_json_atomic(paths["collectResultPath"], result)
     all_errors = [*errors, *result["errors"]]

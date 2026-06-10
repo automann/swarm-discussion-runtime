@@ -49,6 +49,11 @@ def _load_context_summary(request: dict[str, Any], base_dir: Path | None, errors
         except FileNotFoundError:
             errors.append(_issue("missing_context_summary", "contextSummaryPath", f"missing context summary: {path}"))
             return ""
+        except (OSError, UnicodeDecodeError) as exc:
+            errors.append(
+                _issue("unreadable_context_summary", "contextSummaryPath", f"cannot read context summary: {exc}")
+            )
+            return ""
         if not text.strip():
             errors.append(_issue("empty_context_summary", "contextSummaryPath", "context summary is empty"))
             return ""
@@ -164,7 +169,7 @@ def _validate_messages(raw_messages: Any, errors: list[dict[str, Any]]) -> list[
     return messages
 
 
-def _response_slice(messages: list[dict[str, Any]], persona_id: str, budget: int) -> tuple[str, dict[str, str]]:
+def _response_visibility(messages: list[dict[str, Any]], persona_id: str, budget: int) -> dict[str, str]:
     peer_indexes = [
         index
         for index, message in enumerate(messages)
@@ -178,18 +183,24 @@ def _response_slice(messages: list[dict[str, Any]], persona_id: str, budget: int
             full_peer_ids.add(str(messages[index]["id"]))
             remaining -= len(full_text)
 
-    rendered: list[str] = []
     visibility: dict[str, str] = {}
     for message in messages:
         message_id = str(message["id"])
         sender = message.get("from")
         if sender == persona_id or _is_pinned_message(message) or message_id in full_peer_ids:
-            rendered.append(_render_full(message))
             visibility[message_id] = "full"
         else:
-            rendered.append(_render_gist(message))
             visibility[message_id] = "gist"
-    return "\n".join(rendered), visibility
+    return visibility
+
+
+def _render_with_visibility(messages: list[dict[str, Any]], visibility: dict[str, str]) -> str:
+    return "\n".join(
+        _render_full(message)
+        if visibility.get(str(message["id"])) == "full"
+        else _render_gist(message)
+        for message in messages
+    )
 
 
 def _output_contract(phase: str) -> dict[str, Any]:
@@ -276,11 +287,7 @@ def _build_prompt_text(
         )
 
     if phase == "response":
-        slice_text, _ = _response_slice(
-            messages,
-            _persona_id(persona),
-            int(request.get("visibilityBudget", 100000)),
-        )
+        slice_text = _render_with_visibility(messages, visibility)
         task = instruction or "Respond to visible arguments and record any position shift triggers."
         return "\n\n".join(
             [
@@ -342,7 +349,7 @@ def build_prompt(request: Any, base_dir: Path | None = None) -> dict[str, Any]:
             errors.append(_issue("missing_persona_id", "persona.id", "persona.id is required"))
 
     visibility_budget = request.get("visibilityBudget", 100000)
-    if not isinstance(visibility_budget, int) or visibility_budget < 0:
+    if isinstance(visibility_budget, bool) or not isinstance(visibility_budget, int) or visibility_budget < 0:
         errors.append(
             _issue("invalid_visibility_budget", "visibilityBudget", "visibilityBudget must be a non-negative integer")
         )
@@ -358,7 +365,7 @@ def build_prompt(request: Any, base_dir: Path | None = None) -> dict[str, Any]:
             if message.get("type") in ARGUMENTATION_TYPES
         }
     elif phase == "response":
-        _, visibility = _response_slice(messages, _persona_id(persona), visibility_budget)
+        visibility = _response_visibility(messages, _persona_id(persona), visibility_budget)
     elif phase in FIXED_ROLE_PHASES:
         visibility = {str(message["id"]): "full" for message in messages}
 

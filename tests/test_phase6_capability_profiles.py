@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from swarm.capabilities import capability_doctor_report, validate_capability_profile
+from swarm.capabilities import capability_doctor_report, load_jsonl, validate_capability_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -164,3 +164,44 @@ def test_capability_profile_schema_documents_default_and_readonly_contracts() ->
         "write",
     ]
     assert "toolEvidencePolicy" in schema["required"]
+
+
+def test_doctor_does_not_double_count_profile_errors() -> None:
+    profile = load_json(PROFILES / "expert-readonly.json")
+    profile["role"] = "superuser"
+    records, errors = load_jsonl(FIXTURES / "tool-evidence-valid.jsonl")
+    assert not errors
+
+    report = capability_doctor_report(profile, records, tool_evidence_base_dir=FIXTURES)
+
+    invalid_role_errors = [error for error in report["errors"] if error["code"] == "invalid_role"]
+    assert len(invalid_role_errors) == 1
+
+
+def test_records_are_not_accepted_under_an_invalid_profile() -> None:
+    profile = load_json(PROFILES / "expert-readonly.json")
+    profile["role"] = "superuser"
+    records, errors = load_jsonl(FIXTURES / "tool-evidence-valid.jsonl")
+    assert not errors
+
+    report = capability_doctor_report(profile, records, tool_evidence_base_dir=FIXTURES)
+
+    assert report["ok"] is False
+    assert report["toolEvidence"]["acceptedCount"] == 0
+    assert report["toolEvidence"]["accepted"] == []
+    assert report["toolEvidence"]["citable"] is False
+
+
+def test_profile_validation_requires_schema_documented_fields() -> None:
+    profile = load_json(PROFILES / "expert-basic.json")
+    del profile["title"]
+    del profile["status"]
+    del profile["toolEvidencePolicy"]["citation"]
+
+    result = validate_capability_profile(profile)
+
+    assert result["ok"] is False
+    paths = {error["path"] for error in result["errors"]}
+    assert "profile.title" in paths
+    assert "profile.status" in paths
+    assert "profile.toolEvidencePolicy.citation" in paths

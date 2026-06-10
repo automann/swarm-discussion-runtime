@@ -41,9 +41,9 @@ def _load_wait_batches(path: Path) -> tuple[list[dict[str, Any]], list[dict[str,
         except json.JSONDecodeError:
             pass
         else:
-            return [payload] if isinstance(payload, dict) else [], [
-                _issue("invalid_wait_result", str(path), "wait result must be a JSON object")
-            ]
+            if isinstance(payload, dict):
+                return [payload], []
+            return [], [_issue("invalid_wait_result", str(path), "wait result must be a JSON object")]
 
     batches: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
@@ -65,8 +65,12 @@ def _load_wait_batches(path: Path) -> tuple[list[dict[str, Any]], list[dict[str,
 def _resolve_artifact_path(discussion_dir: Path, artifact_path: Any) -> Path | None:
     if not isinstance(artifact_path, str) or not artifact_path.strip():
         return None
-    path = Path(artifact_path)
-    return path if path.is_absolute() else discussion_dir / path
+    if "\\" in artifact_path:
+        return None
+    parts = artifact_path.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    return discussion_dir / artifact_path
 
 
 def _collect_core(payload: dict[str, Any]) -> dict[str, Any]:
@@ -107,7 +111,13 @@ def _transport_replay(
     }
     for field, path in missing_paths.items():
         if path is None:
-            errors.append(_issue("missing_artifact_path", f"{host_step_path}:artifacts.{field}", "artifact path is required"))
+            errors.append(
+                _issue(
+                    "missing_artifact_path",
+                    f"{host_step_path}:artifacts.{field}",
+                    "artifact path must be a relative path inside the discussion directory",
+                )
+            )
 
     spawn_order: Any = []
     if spawn_order_path is not None:
@@ -124,6 +134,7 @@ def _transport_replay(
         errors.extend(wait_errors)
 
     stored_collect: Any = {}
+    stored_loaded = False
     if collect_result_path is not None:
         stored_collect, load_error = _load_json(collect_result_path)
         if load_error:
@@ -131,9 +142,11 @@ def _transport_replay(
         elif not isinstance(stored_collect, dict):
             errors.append(_issue("invalid_collect_result", str(collect_result_path), "collect result must be an object"))
             stored_collect = {}
+        else:
+            stored_loaded = True
 
     replay = collect_merge(spawn_order if isinstance(spawn_order, list) else [], wait_batches)
-    if stored_collect and _collect_core(stored_collect) != _collect_core(replay):
+    if stored_loaded and _collect_core(stored_collect) != _collect_core(replay):
         errors.append(
             _issue(
                 "collect_replay_mismatch",

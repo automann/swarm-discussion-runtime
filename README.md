@@ -50,7 +50,7 @@ runtime-contract.json     machine-readable plugin/runtime contract
 runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
 tests/                    contract and smoke tests
-fixtures/                 future legacy rounds and wait-result fixtures
+fixtures/                 phase fixtures and the minimal-v2 e2e loop anchor
 schemas/                  runtime artifact schemas
 references/               source-plan and legacy-reference notes
 ```

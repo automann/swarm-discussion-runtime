@@ -6,8 +6,25 @@ from pathlib import Path
 from typing import Any
 
 from swarm.adapter import validate_host_transport_metadata
-from swarm.audit import build_evidence, build_trace
+from swarm.audit import EVIDENCE_KIND, build_evidence, build_trace
 from swarm.validation import validate_discussion_dir
+
+REQUIRED_EVIDENCE_KEYS = (
+    "schemaVersion",
+    "kind",
+    "discussion",
+    "outcome",
+    "metrics",
+    "validation",
+    "transport",
+    "prompts",
+    "capabilities",
+    "wal",
+    "quality",
+    "trace",
+    "artifacts",
+    "rawHostLogs",
+)
 
 
 def _issue(code: str, path: str, message: str, value: Any = None) -> dict[str, Any]:
@@ -111,6 +128,34 @@ def validate_minimal_loop(discussion_dir: Path) -> dict[str, Any]:
     for label, path in required_artifacts.items():
         if not path.exists():
             errors.append(_issue("missing_loop_artifact", str(path), f"missing {label} artifact"))
+
+    evidence_path = required_artifacts["evidence"]
+    if evidence_path.exists():
+        stored_evidence, evidence_error = _load_json(evidence_path)
+        if evidence_error:
+            errors.append(evidence_error)
+        elif not isinstance(stored_evidence, dict):
+            errors.append(_issue("invalid_evidence_artifact", str(evidence_path), "evidence artifact must be an object"))
+        else:
+            if stored_evidence.get("kind") != EVIDENCE_KIND:
+                errors.append(
+                    _issue(
+                        "invalid_evidence_artifact",
+                        str(evidence_path),
+                        f"evidence artifact kind must be {EVIDENCE_KIND}",
+                        stored_evidence.get("kind"),
+                    )
+                )
+            missing_keys = [key for key in REQUIRED_EVIDENCE_KEYS if key not in stored_evidence]
+            if missing_keys:
+                errors.append(
+                    _issue(
+                        "incomplete_evidence_artifact",
+                        str(evidence_path),
+                        "evidence artifact is missing schema-required keys",
+                        missing_keys,
+                    )
+                )
 
     next_action = trace.get("nextAction", {})
     if trace.get("health") != "on-track" or next_action.get("kind") != "none":

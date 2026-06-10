@@ -78,10 +78,19 @@ def collect_merge(
             agent_id = str(agent_id)
             previous = status_by_agent.get(agent_id, missing)
             if previous is not missing:
-                _, previous_error = _parse_completed(previous)
-                _, next_error = _parse_completed(entry)
+                previous_payload, previous_error = _parse_completed(previous)
+                next_payload, next_error = _parse_completed(entry)
                 if previous_error is None and next_error is not None:
                     continue
+                if previous_error is None and next_error is None and previous_payload != next_payload:
+                    errors.append(
+                        {
+                            "code": "conflicting_completed_payload",
+                            "batch": batch_index,
+                            "agentId": agent_id,
+                            "message": "agent reported two different completed payloads",
+                        }
+                    )
             status_by_agent[agent_id] = entry
 
     parsed_by_agent = {
@@ -91,6 +100,9 @@ def collect_merge(
     results: list[dict[str, Any]] = []
     missing_agent_ids: list[str | None] = []
     missing_personas: list[str | None] = []
+    consumed = {
+        _agent_id(spec) for spec in spawn_order if _agent_id(spec) in status_by_agent
+    }
 
     for spec in spawn_order:
         expected_agent_id = _agent_id(spec)
@@ -103,7 +115,8 @@ def collect_merge(
             matches = [
                 candidate_agent_id
                 for candidate_agent_id, payload in parsed_by_agent.items()
-                if payload
+                if candidate_agent_id not in consumed
+                and payload
                 and (
                     payload.get("name") == persona
                     or payload.get("persona") == persona
@@ -125,19 +138,24 @@ def collect_merge(
                 )
                 continue
             match = matches[0]
+            consumed.add(match)
             actual_agent_id = match
             entry = status_by_agent[match]
 
         payload, error = _parse_completed(entry)
         if error:
-            errors.append(
-                {
-                    "code": "invalid_completed_payload",
-                    "agentId": actual_agent_id,
-                    "persona": persona,
-                    "message": error,
-                }
-            )
+            if isinstance(entry, dict) and "completed" not in entry:
+                missing_agent_ids.append(actual_agent_id)
+                missing_personas.append(persona)
+            else:
+                errors.append(
+                    {
+                        "code": "invalid_completed_payload",
+                        "agentId": actual_agent_id,
+                        "persona": persona,
+                        "message": error,
+                    }
+                )
             continue
 
         results.append(

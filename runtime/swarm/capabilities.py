@@ -81,6 +81,11 @@ def validate_capability_profile(profile: Any) -> dict[str, Any]:
         errors.append(_issue("missing_string", "profile.id", "must be a non-empty string"))
         profile_id = ""
 
+    for field in ("title", "status"):
+        value = profile.get(field)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(_issue("missing_string", f"profile.{field}", "must be a non-empty string"))
+
     role = profile.get("role")
     if role not in ORDINARY_EXPERT_ROLES | {"coordinator", "executor"}:
         errors.append(_issue("invalid_role", "profile.role", "unknown capability role", role))
@@ -125,6 +130,11 @@ def validate_capability_profile(profile: Any) -> dict[str, Any]:
     for field in ("requiresLoggedToolCall", "requiresValidation"):
         if policy.get(field) is not True:
             errors.append(_issue("weak_evidence_policy", f"profile.toolEvidencePolicy.{field}", "must be true"))
+    citation = policy.get("citation")
+    if not isinstance(citation, str) or not citation.strip():
+        errors.append(
+            _issue("missing_string", "profile.toolEvidencePolicy.citation", "must be a non-empty string")
+        )
 
     summary = {
         "id": profile_id,
@@ -150,17 +160,19 @@ def validate_tool_evidence_records(
     profile_result = validate_capability_profile(profile)
     active_profile_id = profile_result.get("summary", {}).get("id")
     allowed_tools = set(profile_result.get("summary", {}).get("allowedTools", []))
-    errors = list(profile_result["errors"])
+    profile_errors = list(profile_result["errors"])
+    record_errors: list[dict[str, Any]] = []
     accepted: list[dict[str, Any]] = []
 
     for index, record in enumerate(records, start=1):
         path = f"toolEvidence[{index}]"
+        errors_before = len(record_errors)
         if record.get("schemaVersion") != SCHEMA_VERSION:
-            errors.append(_issue("unsupported_schema_version", f"{path}.schemaVersion", f"must be {SCHEMA_VERSION}"))
+            record_errors.append(_issue("unsupported_schema_version", f"{path}.schemaVersion", f"must be {SCHEMA_VERSION}"))
         if record.get("kind") != TOOL_EVIDENCE_KIND:
-            errors.append(_issue("invalid_kind", f"{path}.kind", f"must be {TOOL_EVIDENCE_KIND}", record.get("kind")))
+            record_errors.append(_issue("invalid_kind", f"{path}.kind", f"must be {TOOL_EVIDENCE_KIND}", record.get("kind")))
         if record.get("profileId") != active_profile_id:
-            errors.append(
+            record_errors.append(
                 _issue(
                     "profile_mismatch",
                     f"{path}.profileId",
@@ -170,16 +182,16 @@ def validate_tool_evidence_records(
             )
         tool = record.get("tool")
         if tool not in allowed_tools:
-            errors.append(_issue("tool_not_allowed", f"{path}.tool", "tool is not allowed by effective profile", tool))
+            record_errors.append(_issue("tool_not_allowed", f"{path}.tool", "tool is not allowed by effective profile", tool))
         if record.get("validated") is not True:
-            errors.append(_issue("unvalidated_tool_evidence", f"{path}.validated", "tool evidence must be validated"))
+            record_errors.append(_issue("unvalidated_tool_evidence", f"{path}.validated", "tool evidence must be validated"))
         artifact_path = record.get("artifactPath")
         if not isinstance(artifact_path, str) or not artifact_path.strip():
-            errors.append(_issue("missing_artifact_path", f"{path}.artifactPath", "artifact path is required"))
+            record_errors.append(_issue("missing_artifact_path", f"{path}.artifactPath", "artifact path is required"))
         elif base_dir:
             resolved = base_dir / artifact_path
             if not resolved.exists():
-                errors.append(
+                record_errors.append(
                     _issue(
                         "missing_artifact",
                         f"{path}.artifactPath",
@@ -189,8 +201,8 @@ def validate_tool_evidence_records(
                 )
         validation = record.get("validation")
         if not isinstance(validation, dict) or validation.get("ok") is not True:
-            errors.append(_issue("failed_tool_validation", f"{path}.validation", "validation.ok must be true"))
-        if not errors or all(not error["path"].startswith(path) for error in errors):
+            record_errors.append(_issue("failed_tool_validation", f"{path}.validation", "validation.ok must be true"))
+        if not profile_errors and len(record_errors) == errors_before:
             accepted.append(
                 {
                     "agentId": record.get("agentId"),
@@ -200,6 +212,7 @@ def validate_tool_evidence_records(
                 }
             )
 
+    errors = [*profile_errors, *record_errors]
     return {
         "ok": not errors,
         "errors": errors,
@@ -222,9 +235,8 @@ def capability_doctor_report(
     effective = dict(profile_result.get("summary", {}))
     effective["canCiteToolDerivedEvidence"] = bool(evidence and evidence.get("citable"))
     effective["citationRule"] = "tool evidence must be logged, validated, and allowed by the active profile"
-    errors = list(profile_result["errors"])
-    if evidence:
-        errors.extend(evidence["errors"])
+    # evidence["errors"] already includes the profile errors; do not double-count.
+    errors = list(evidence["errors"]) if evidence is not None else list(profile_result["errors"])
     return {
         "ok": not errors,
         "errors": errors,

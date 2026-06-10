@@ -87,9 +87,12 @@ def test_fixture_trace_and_evidence_show_complete_artifact_backed_loop() -> None
 
 def test_static_evidence_artifact_omits_raw_tool_payload() -> None:
     evidence_text = (FIXTURE / "artifacts" / "evidence.json").read_text()
+    raw_artifact = json.loads(
+        (FIXTURE / "capabilities" / "artifacts" / "read-001.json").read_text()
+    )
 
     assert "excerptSha256" not in evidence_text
-    assert "command" not in evidence_text
+    assert raw_artifact["excerptSha256"] not in evidence_text
     assert "capabilities/artifacts/read-001.json" in evidence_text
 
 
@@ -116,3 +119,15 @@ def test_validate_loop_rejects_non_citable_tool_evidence(tmp_path: Path) -> None
     assert result["ok"] is False
     assert result["summary"]["health"] == "at-risk"
     assert any(error["code"] == "unvalidated_tool_evidence" for error in result["errors"])
+
+
+def test_validate_loop_rejects_schema_incomplete_evidence_artifact(tmp_path: Path) -> None:
+    fixture = copy_fixture(tmp_path)
+    (fixture / "artifacts" / "evidence.json").write_text(
+        json.dumps({"kind": "swarm.discussion_evidence", "note": "stale anchor"})
+    )
+
+    result = validate_minimal_loop(fixture)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "incomplete_evidence_artifact" for error in result["errors"])

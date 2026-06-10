@@ -13,6 +13,7 @@ def planned_commands() -> list[str]:
     """
     return [
         "health",
+        "planned-commands",
         "runtime-contract",
         "init",
         "context-build",

@@ -11,7 +11,7 @@ from typing import Any
 
 from swarm.validation import ALLOWED_RELATIONS, validate_round_record
 
-MESSAGE_ID = re.compile(r"^r(\d+)-msg-(\d{3})$")
+MESSAGE_ID = re.compile(r"^r(\d+)-msg-(\d{3,})$")
 
 
 def _issue(code: str, path: str, message: str, value: Any = None) -> dict[str, Any]:
@@ -45,8 +45,16 @@ def _fsync_dir(path: Path) -> None:
         pass
 
 
-def _read_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text())
+def _read_json(path: Path) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    try:
+        payload = json.loads(path.read_text())
+    except OSError as exc:
+        return None, _issue("unreadable_state", str(path), f"cannot read state file: {exc}")
+    except json.JSONDecodeError as exc:
+        return None, _issue("invalid_json", str(path), f"invalid JSON in state file: {exc}")
+    if not isinstance(payload, dict):
+        return None, _issue("invalid_state", str(path), "state file must contain a JSON object")
+    return payload, None
 
 
 def _event_seq(events_path: Path) -> int:
@@ -58,6 +66,7 @@ def _event_seq(events_path: Path) -> int:
 def append_event(discussion_dir: Path, event_type: str, data: dict[str, Any]) -> dict[str, Any]:
     discussion_dir.mkdir(parents=True, exist_ok=True)
     events_path = discussion_dir / "events.jsonl"
+    events_existed = events_path.exists()
     event = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "seq": _event_seq(events_path),
@@ -68,16 +77,22 @@ def append_event(discussion_dir: Path, event_type: str, data: dict[str, Any]) ->
         handle.write(json.dumps(event, sort_keys=True) + "\n")
         handle.flush()
         os.fsync(handle.fileno())
+    if not events_existed:
+        _fsync_dir(discussion_dir)
     return event
 
 
-def _load_state(discussion_dir: Path, round_id: int) -> tuple[dict[str, Any] | None, str | None]:
+def _load_state(
+    discussion_dir: Path, round_id: int
+) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None]:
     paths = _round_paths(discussion_dir, round_id)
     if paths["partial"].exists():
-        return _read_json(paths["partial"]), "partial"
+        state, issue = _read_json(paths["partial"])
+        return state, "partial", issue
     if paths["final"].exists():
-        return _read_json(paths["final"]), "final"
-    return None, None
+        state, issue = _read_json(paths["final"])
+        return state, "final", issue
+    return None, None, None
 
 
 def _empty_state(round_id: int, phase: str) -> dict[str, Any]:
@@ -103,26 +118,32 @@ def _seqs_from_state(state: dict[str, Any], round_id: int) -> set[int]:
     return seqs
 
 
-def _seqs_on_disk(discussion_dir: Path, round_id: int) -> set[int]:
+def _seqs_on_disk(discussion_dir: Path, round_id: int) -> tuple[set[int], list[dict[str, Any]]]:
     paths = _round_paths(discussion_dir, round_id)
     seqs: set[int] = set()
+    issues: list[dict[str, Any]] = []
     for path in (paths["partial"], paths["final"]):
         if path.exists():
-            seqs.update(_seqs_from_state(_read_json(path), round_id))
-    return seqs
+            state, issue = _read_json(path)
+            if issue is not None:
+                issues.append(issue)
+                continue
+            seqs.update(_seqs_from_state(state, round_id))
+    return seqs, issues
 
 
-def max_seq(discussion_dir: Path, round_id: int) -> int:
-    seqs = _seqs_on_disk(discussion_dir, round_id)
-    return max(seqs) if seqs else 0
+def max_seq(discussion_dir: Path, round_id: int) -> tuple[int, list[dict[str, Any]]]:
+    seqs, issues = _seqs_on_disk(discussion_dir, round_id)
+    return (max(seqs) if seqs else 0), issues
 
 
-def next_message_id(discussion_dir: Path, round_id: int) -> str:
-    return f"r{round_id}-msg-{max_seq(discussion_dir, round_id) + 1:03d}"
+def next_message_id(discussion_dir: Path, round_id: int) -> tuple[str, list[dict[str, Any]]]:
+    seq, issues = max_seq(discussion_dir, round_id)
+    return f"r{round_id}-msg-{seq + 1:03d}", issues
 
 
 def _max_message_id(discussion_dir: Path, round_id: int) -> str | None:
-    seq = max_seq(discussion_dir, round_id)
+    seq, _ = max_seq(discussion_dir, round_id)
     return f"r{round_id}-msg-{seq:03d}" if seq else None
 
 
@@ -190,11 +211,47 @@ def _validate_message_payload(
     return errors
 
 
+def _round_guard(
+    discussion_dir: Path, round_id: int, state: dict[str, Any], allow_final: bool = False
+) -> list[dict[str, Any]]:
+    errors: list[dict[str, Any]] = []
+    if isinstance(round_id, bool) or not isinstance(round_id, int) or round_id < 1:
+        errors.append(_issue("invalid_round_id", "round", "round must be a positive integer", round_id))
+        return errors
+    if not isinstance(state, dict):
+        errors.append(_issue("invalid_state", "state", "state must be a JSON object"))
+        return errors
+    declared = state.get("roundId", round_id)
+    if isinstance(declared, bool) or not isinstance(declared, int) or declared != round_id:
+        errors.append(
+            _issue("round_id_mismatch", "state.roundId", "state roundId must match the target round", declared)
+        )
+    paths = _round_paths(discussion_dir, round_id)
+    if not allow_final and paths["final"].exists():
+        errors.append(_issue("round_finalized", "round", "cannot write to a finalized round", round_id))
+    if round_id > 1:
+        previous = _round_paths(discussion_dir, round_id - 1)
+        if not previous["final"].exists():
+            errors.append(
+                _issue(
+                    "round_not_sequential",
+                    "round",
+                    f"round {round_id} requires round {round_id - 1} to be finalized first",
+                    round_id,
+                )
+            )
+    return errors
+
+
 def checkpoint(discussion_dir: Path, round_id: int, phase: str, state: dict[str, Any]) -> dict[str, Any]:
+    guard_errors = _round_guard(discussion_dir, round_id, state)
+    if guard_errors:
+        return {"ok": False, "errors": guard_errors}
+
     paths = _round_paths(discussion_dir, round_id)
     payload = dict(state)
-    payload["roundId"] = int(payload.get("roundId", round_id))
-    payload["round"] = int(round_id)
+    payload["roundId"] = round_id
+    payload["round"] = round_id
     payload["phase"] = phase
     paths["rounds"].mkdir(parents=True, exist_ok=True)
 
@@ -212,13 +269,21 @@ def checkpoint(discussion_dir: Path, round_id: int, phase: str, state: dict[str,
         if isinstance(message, dict) and isinstance(message.get("id"), str)
     ]
     if message_ids:
-        progress_seen = paths["progress"].read_text() if paths["progress"].exists() else ""
+        progress_seen: set[str] = set()
+        progress_existed = paths["progress"].exists()
+        if progress_existed:
+            for line in paths["progress"].read_text().splitlines():
+                token = line.split(" ", 1)[0].strip()
+                if token:
+                    progress_seen.add(token)
         with paths["progress"].open("a") as progress:
             for message_id in message_ids:
                 if message_id not in progress_seen:
                     progress.write(f"{message_id} emitted\n")
             progress.flush()
             os.fsync(progress.fileno())
+        if not progress_existed:
+            _fsync_dir(discussion_dir)
 
     event = append_event(
         discussion_dir,
@@ -243,7 +308,9 @@ def checkpoint(discussion_dir: Path, round_id: int, phase: str, state: dict[str,
 def append_message(
     discussion_dir: Path, round_id: int, phase: str, message: dict[str, Any]
 ) -> dict[str, Any]:
-    state, source = _load_state(discussion_dir, round_id)
+    state, source, state_issue = _load_state(discussion_dir, round_id)
+    if state_issue is not None:
+        return {"ok": False, "errors": [state_issue]}
     if source == "final":
         return {
             "ok": False,
@@ -261,7 +328,9 @@ def append_message(
     if errors:
         return {"ok": False, "errors": errors}
 
-    minted_id = next_message_id(discussion_dir, round_id)
+    minted_id, mint_issues = next_message_id(discussion_dir, round_id)
+    if mint_issues:
+        return {"ok": False, "errors": mint_issues}
     new_message = dict(message)
     new_message["id"] = minted_id
     new_message.setdefault("references", [])
@@ -286,11 +355,17 @@ def append_message(
 
 
 def finalize_round(discussion_dir: Path, round_id: int, final_state: dict[str, Any]) -> dict[str, Any]:
+    guard_errors = _round_guard(discussion_dir, round_id, final_state)
+    if guard_errors:
+        return {"ok": False, "errors": guard_errors}
+
     validation = validate_round_record(final_state)
     if not validation["ok"]:
         return {"ok": False, "errors": validation["errors"], "warnings": validation["warnings"]}
 
     checkpoint_result = checkpoint(discussion_dir, round_id, "complete", final_state)
+    if not checkpoint_result.get("ok"):
+        return {"ok": False, "errors": checkpoint_result.get("errors", [])}
     paths = _round_paths(discussion_dir, round_id)
     if not paths["partial"].exists():
         return {
@@ -342,25 +417,44 @@ def resume_plan(discussion_dir: Path) -> dict[str, Any]:
     top = max(candidates)
     paths = _round_paths(discussion_dir, top)
     if paths["partial"].exists():
-        state = _read_json(paths["partial"])
+        state, issue = _read_json(paths["partial"])
         source = "partial"
-        phase = state.get("phase")
         action = "resume_round"
         state_path = paths["partial"]
     else:
-        state = _read_json(paths["final"])
+        state, issue = _read_json(paths["final"])
         source = "final"
-        phase = "complete"
         action = "start_next_round"
         state_path = paths["final"]
+
+    if issue is not None:
+        return {
+            "ok": False,
+            "errors": [issue],
+            "source": source,
+            "round": top,
+            "statePath": str(state_path),
+            "nextAction": "inspect_artifacts",
+        }
+
+    next_id, seq_issues = next_message_id(discussion_dir, top)
+    if seq_issues:
+        return {
+            "ok": False,
+            "errors": seq_issues,
+            "source": source,
+            "round": top,
+            "statePath": str(state_path),
+            "nextAction": "inspect_artifacts",
+        }
 
     return {
         "ok": True,
         "source": source,
         "round": top,
-        "phase": phase,
+        "phase": state.get("phase") if source == "partial" else "complete",
         "maxId": _max_message_id(discussion_dir, top),
-        "nextMessageId": next_message_id(discussion_dir, top),
+        "nextMessageId": next_id,
         "statePath": str(state_path),
         "messageCount": len(state.get("messages", []) or []),
         "nextAction": action,

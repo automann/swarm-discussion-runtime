@@ -119,3 +119,37 @@ def test_host_transport_schema_documents_thin_parent_context() -> None:
     assert parent_context["additionalProperties"] is False
     assert parent_context["required"] == ["briefPath", "phase", "agentIds", "nextHelperCommand"]
     assert schema["properties"]["transport"]["properties"]["resultKey"]["enum"] == ["agent_id", "name"]
+
+
+def test_host_step_rejects_empty_required_sections() -> None:
+    payload = load_json(FIXTURES / "codex-host-step.json")
+    payload["parentContext"] = {}
+    payload["runtimeCommands"] = {}
+    payload["transport"] = {}
+    payload["artifacts"] = {}
+
+    result = validate_host_transport_metadata(payload)
+
+    assert result["ok"] is False
+    paths = {error["path"] for error in result["errors"]}
+    assert "hostStep.parentContext.briefPath" in paths
+    assert "hostStep.parentContext.agentIds" in paths
+    assert "hostStep.parentContext.nextHelperCommand" in paths
+    assert "hostStep.runtimeCommands.collectMerge" in paths
+    assert "hostStep.transport.resultKey" in paths
+    assert "hostStep.artifacts.spawnOrderPath" in paths
+
+
+def test_host_step_rejects_absolute_and_traversal_artifact_paths() -> None:
+    payload = load_json(FIXTURES / "codex-host-step.json")
+    payload["artifacts"]["spawnOrderPath"] = "/etc/passwd"
+    payload["artifacts"]["waitBatchesPath"] = "../../outside/wait-batches.jsonl"
+
+    result = validate_host_transport_metadata(payload)
+
+    assert result["ok"] is False
+    codes = {error["code"] for error in result["errors"]}
+    assert "invalid_artifact_path" in codes
+    paths = {error["path"] for error in result["errors"] if error["code"] == "invalid_artifact_path"}
+    assert "hostStep.artifacts.spawnOrderPath" in paths
+    assert "hostStep.artifacts.waitBatchesPath" in paths

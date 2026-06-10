@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_RELATIONS = {"supports", "counters", "extends", "questions"}
-MESSAGE_ID = re.compile(r"^r(\d+)-msg-(\d{3})$")
+MESSAGE_ID = re.compile(r"^r(\d+)-msg-(\d{3,})$")
 COMPLETED_STATUSES = {"completed", "complete", "done"}
 
 
@@ -17,6 +17,30 @@ def _issue(code: str, path: str, message: str, value: Any = None) -> dict[str, A
     if value is not None:
         issue["value"] = value
     return issue
+
+
+def _resolves(value: Any, present: set[str]) -> bool:
+    return isinstance(value, str) and value in present
+
+
+def _shift_trigger_ids(shift: dict[str, Any]) -> list[Any]:
+    trigger = shift.get("trigger")
+    if isinstance(trigger, list):
+        return trigger
+    if trigger is None:
+        return []
+    return [trigger]
+
+
+def _require_list(
+    round_record: dict[str, Any], field: str, code: str, errors: list[dict[str, Any]]
+) -> list[Any]:
+    value = round_record.get(field)
+    if isinstance(value, list):
+        return value
+    if field in round_record:
+        errors.append(_issue(code, field, f"{field} must be a list", value))
+    return []
 
 
 def _load_json(path: Path, errors: list[dict[str, Any]], label: str) -> Any:
@@ -52,10 +76,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(round_id, int):
         errors.append(_issue("invalid_round_id", "roundId", "roundId must be an integer", round_id))
 
-    messages = round_record.get("messages") or []
-    if not isinstance(messages, list):
-        errors.append(_issue("invalid_messages", "messages", "messages must be a list"))
-        messages = []
+    messages = _require_list(round_record, "messages", "invalid_messages", errors)
 
     message_ids: list[str] = []
     seqs: list[int] = []
@@ -101,10 +122,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
         )
 
     present = set(message_ids)
-    argument_graph = round_record.get("argumentGraph") or []
-    if not isinstance(argument_graph, list):
-        errors.append(_issue("invalid_argument_graph", "argumentGraph", "argumentGraph must be a list"))
-        argument_graph = []
+    argument_graph = _require_list(round_record, "argumentGraph", "invalid_argument_graph", errors)
 
     for index, edge in enumerate(argument_graph):
         path = f"argumentGraph[{index}]"
@@ -122,7 +140,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
                 )
             )
         for key in ("from", "to"):
-            if edge.get(key) not in present:
+            if not _resolves(edge.get(key), present):
                 errors.append(
                     _issue(
                         "unresolved_edge",
@@ -135,10 +153,12 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
     for message_index, message in enumerate(messages):
         if not isinstance(message, dict):
             continue
-        references = message.get("references") or []
+        references = message.get("references")
         path = f"messages[{message_index}].references"
+        if references is None and "references" not in message:
+            references = []
         if not isinstance(references, list):
-            errors.append(_issue("invalid_references", path, "references must be a list"))
+            errors.append(_issue("invalid_references", path, "references must be a list", references))
             continue
         for ref_index, ref in enumerate(references):
             ref_path = f"{path}[{ref_index}]"
@@ -155,7 +175,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
                         relation,
                     )
                 )
-            if ref.get("targetId") not in present:
+            if not _resolves(ref.get("targetId"), present):
                 errors.append(
                     _issue(
                         "unresolved_reference",
@@ -165,27 +185,29 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
                     )
                 )
 
-    position_shifts = round_record.get("positionShifts") or []
-    if not isinstance(position_shifts, list):
-        errors.append(
-            _issue(
-                "invalid_position_shifts",
-                "positionShifts",
-                "positionShifts must be a list",
-                round_record.get("positionShifts"),
-            )
-        )
-        position_shifts = []
+    position_shifts = _require_list(round_record, "positionShifts", "invalid_position_shifts", errors)
 
     for shift_index, shift in enumerate(position_shifts):
         path = f"positionShifts[{shift_index}]"
         if not isinstance(shift, dict):
             errors.append(_issue("invalid_position_shift", path, "position shift must be an object"))
             continue
-        trigger = shift.get("trigger")
-        trigger_ids = trigger if isinstance(trigger, list) else ([trigger] if trigger else [])
+        expert = shift.get("expert")
+        if not isinstance(expert, str) or not expert.strip():
+            errors.append(
+                _issue("invalid_shift_expert", f"{path}.expert", "position shift must name its expert", expert)
+            )
+        trigger_ids = _shift_trigger_ids(shift)
+        if not trigger_ids:
+            errors.append(
+                _issue(
+                    "missing_shift_trigger",
+                    f"{path}.trigger",
+                    "position shift must cite at least one trigger message id",
+                )
+            )
         for trigger_id in trigger_ids:
-            if trigger_id not in present:
+            if not _resolves(trigger_id, present):
                 errors.append(
                     _issue(
                         "unresolved_shift_trigger",
@@ -222,8 +244,17 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
             )
         )
     participants = metadata.get("participants")
-    distinct_senders = {message.get("from") for message in messages if isinstance(message, dict)}
-    if set(participants or []) != distinct_senders:
+    distinct_senders = {
+        message.get("from")
+        for message in messages
+        if isinstance(message, dict) and isinstance(message.get("from"), str)
+    }
+    participant_set = (
+        {item for item in participants if isinstance(item, str)}
+        if isinstance(participants, list) and all(isinstance(item, str) for item in participants)
+        else None
+    )
+    if participant_set is None or participant_set != distinct_senders:
         errors.append(
             _issue(
                 "metadata_mismatch",
@@ -234,15 +265,36 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
         )
 
     context_log = round_record.get("personaContextLog")
-    if context_log:
-        for shift_index, shift in enumerate(position_shifts):
-            if not isinstance(shift, dict):
-                continue
-            trigger = shift.get("trigger")
-            trigger_ids = trigger if isinstance(trigger, list) else ([trigger] if trigger else [])
+    if context_log is not None and not isinstance(context_log, dict):
+        errors.append(
+            _issue(
+                "invalid_persona_context_log",
+                "personaContextLog",
+                "personaContextLog must be an object",
+                context_log,
+            )
+        )
+        context_log = None
+    dict_shifts = [
+        (shift_index, shift)
+        for shift_index, shift in enumerate(position_shifts)
+        if isinstance(shift, dict)
+    ]
+    if dict_shifts and not context_log:
+        errors.append(
+            _issue(
+                "shift_provenance_unverifiable",
+                "personaContextLog",
+                "position shifts require personaContextLog entries proving full visibility",
+            )
+        )
+    elif context_log:
+        for shift_index, shift in dict_shifts:
             expert = shift.get("expert")
-            visibility = context_log.get(expert, {}) if isinstance(context_log, dict) else {}
-            for trigger_id in trigger_ids:
+            visibility = context_log.get(expert, {}) if isinstance(expert, str) else {}
+            for trigger_id in _shift_trigger_ids(shift):
+                if not isinstance(trigger_id, str):
+                    continue
                 if not isinstance(visibility, dict) or visibility.get(trigger_id) != "full":
                     errors.append(
                         _issue(
@@ -266,6 +318,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
         "errors": errors,
         "warnings": warnings,
         "summary": {
+            "roundId": round_id,
             "messageCount": len(messages),
             "argumentEdgeCount": len(argument_graph),
             "relationEnum": sorted(ALLOWED_RELATIONS),
@@ -335,8 +388,22 @@ def validate_discussion_dir(path: Path) -> dict[str, Any]:
             nested["path"] = f"{round_file.relative_to(path)}:{issue['path']}"
             errors.append(nested)
         warnings.extend(round_result["warnings"])
+        file_round = int(round_file.name.removesuffix(".json"))
+        record_round = round_result.get("summary", {}).get("roundId")
+        if isinstance(record_round, int) and record_round != file_round:
+            errors.append(
+                _issue(
+                    "round_file_mismatch",
+                    str(round_file.relative_to(path)),
+                    "round file name does not match the record roundId",
+                    record_round,
+                )
+            )
 
     status = manifest.get("status") if isinstance(manifest, dict) else None
+    if status is not None and not isinstance(status, str):
+        errors.append(_issue("invalid_status", "manifest.json:status", "manifest status must be a string", status))
+        status = None
     if status in COMPLETED_STATUSES:
         if partial_files:
             errors.append(

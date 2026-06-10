@@ -297,3 +297,84 @@ def test_evidence_schema_requires_core_audit_summaries() -> None:
     assert "prompts" in schema["required"]
     assert "quality" in schema["required"]
     assert "capabilities" in schema["required"]
+
+
+def test_trace_marks_transport_incomplete_when_collect_result_is_unreadable(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    (discussion / "transport" / "r001" / "response" / "collect-result.json").write_text("{corrupt")
+
+    trace = build_trace(discussion)
+    evidence = build_evidence(discussion)
+
+    assert trace["transport"]["complete"] is False
+    assert evidence["transport"]["complete"] is False
+    assert trace["health"] != "on-track"
+    assert evidence["outcome"]["result"] != "completed"
+
+
+def test_trace_reports_corrupt_partial_without_crashing(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    manifest = json.loads((discussion / "manifest.json").read_text())
+    manifest["status"] = "active"
+    (discussion / "manifest.json").write_text(json.dumps(manifest))
+    (discussion / "rounds" / "002.json.partial").write_text("{corrupt")
+
+    trace = build_trace(discussion)
+
+    assert trace["ok"] is True
+    assert trace["resume"]["ok"] is False
+    assert trace["health"] == "off-track"
+    assert trace["nextAction"]["kind"] == "inspect_artifacts"
+
+
+def test_trace_handles_non_numeric_round_id_without_crashing(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    record = json.loads((discussion / "rounds" / "001.json").read_text())
+    record["roundId"] = "one"
+    (discussion / "rounds" / "001.json").write_text(json.dumps(record))
+
+    trace = build_trace(discussion)
+
+    assert trace["ok"] is True
+    assert trace["validation"]["ok"] is False
+
+
+def test_trace_does_not_double_report_missing_manifest(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    (discussion / "manifest.json").unlink()
+
+    trace = build_trace(discussion)
+
+    missing_manifest = [
+        error
+        for error in trace["validation"]["errors"]
+        if error["code"] == "missing_file" and "manifest" in str(error["path"])
+    ]
+    assert len(missing_manifest) == 1
+
+
+def test_evidence_outcome_is_unverified_when_capability_gate_fails(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    attach_capabilities(discussion, "tool-evidence-unvalidated.jsonl")
+
+    evidence = build_evidence(discussion)
+
+    assert evidence["trace"]["nextAction"]["kind"] == "inspect_capabilities"
+    assert evidence["outcome"]["result"] == "unverified"
+    assert evidence["outcome"]["determinedBy"] == "capabilities"
+
+
+def test_evidence_raw_host_logs_present_requires_actual_files(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+    (discussion / "host-logs" / "empty-subdir").mkdir(parents=True)
+
+    evidence = build_evidence(discussion)
+
+    assert evidence["rawHostLogs"]["present"] is False
+    assert evidence["rawHostLogs"]["paths"] == []

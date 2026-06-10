@@ -210,6 +210,160 @@ def test_resume_plan_uses_highest_round_and_only_prefers_partial_on_that_round(t
     assert result["nextMessageId"] == "r3-msg-001"
 
 
+def test_checkpoint_refuses_to_resurrect_a_finalized_round(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    messages = [
+        {
+            **message("architect", "Use formatter."),
+            "id": "r1-msg-001",
+        }
+    ]
+    state = valid_round_state(messages, {"recommendation": "Use formatter."})
+    assert finalize_round(discussion, 1, state)["ok"] is True
+
+    result = checkpoint(discussion, 1, "arguments", state)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "round_finalized" for error in result["errors"])
+    assert not (discussion / "rounds" / "001.json.partial").exists()
+
+    appended = append_message(discussion, 1, "arguments", message("contrarian", "Too late."))
+    assert appended["ok"] is False
+    assert any(error["code"] == "round_finalized" for error in appended["errors"])
+
+    resume = resume_plan(discussion)
+    assert resume["source"] == "final"
+    assert resume["nextAction"] == "start_next_round"
+
+
+def test_checkpoint_rejects_state_round_id_mismatch(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    state = valid_round_state([])
+
+    result = checkpoint(discussion, 2, "declarations", state)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "round_id_mismatch" for error in result["errors"])
+    assert not (discussion / "rounds" / "002.json.partial").exists()
+
+
+def test_finalize_rejects_state_round_id_mismatch(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    messages = [
+        {
+            **message("architect", "Use formatter."),
+            "id": "r1-msg-001",
+        }
+    ]
+    state = valid_round_state(messages, {"recommendation": "Use formatter."})
+
+    result = finalize_round(discussion, 2, state)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "round_id_mismatch" for error in result["errors"])
+    assert not (discussion / "rounds" / "002.json").exists()
+
+
+def test_checkpoint_rejects_non_sequential_round(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    state = valid_round_state([])
+    state["roundId"] = 3
+
+    result = checkpoint(discussion, 3, "declarations", state)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "round_not_sequential" for error in result["errors"])
+
+
+def test_checkpoint_accepts_next_round_after_previous_final(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    messages = [
+        {
+            **message("architect", "Use formatter."),
+            "id": "r1-msg-001",
+        }
+    ]
+    assert finalize_round(
+        discussion, 1, valid_round_state(messages, {"recommendation": "Use formatter."})
+    )["ok"] is True
+    state = valid_round_state([])
+    state["roundId"] = 2
+
+    result = checkpoint(discussion, 2, "declarations", state)
+
+    assert result["ok"] is True, result
+    assert (discussion / "rounds" / "002.json.partial").exists()
+
+
+def test_append_message_reports_corrupt_partial_instead_of_crashing(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    rounds = discussion / "rounds"
+    rounds.mkdir(parents=True)
+    (rounds / "001.json.partial").write_text("{not json")
+
+    result = append_message(discussion, 1, "arguments", message("architect", "Hello."))
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_json" for error in result["errors"])
+
+
+def test_resume_plan_reports_corrupt_partial_instead_of_crashing(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    rounds = discussion / "rounds"
+    rounds.mkdir(parents=True)
+    (rounds / "001.json.partial").write_text("{not json")
+
+    result = resume_plan(discussion)
+
+    assert result["ok"] is False
+    assert result["nextAction"] == "inspect_artifacts"
+    assert any(error["code"] == "invalid_json" for error in result["errors"])
+
+
+def test_resume_plan_reports_non_object_state_instead_of_crashing(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    rounds = discussion / "rounds"
+    rounds.mkdir(parents=True)
+    (rounds / "001.json.partial").write_text("[]")
+
+    result = resume_plan(discussion)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "invalid_state" for error in result["errors"])
+
+
+def test_message_id_minting_continues_past_sequence_999(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    rounds = discussion / "rounds"
+    rounds.mkdir(parents=True)
+    (rounds / "001.json.partial").write_text(
+        json.dumps(
+            {
+                "roundId": 1,
+                "round": 1,
+                "phase": "arguments",
+                "messages": [
+                    {
+                        "id": "r1-msg-999",
+                        "from": "architect",
+                        "type": "argument",
+                        "content": {"summary": "message 999"},
+                        "references": [],
+                    }
+                ],
+            }
+        )
+    )
+
+    first = append_message(discussion, 1, "arguments", message("contrarian", "One past the cap."))
+    second = append_message(discussion, 1, "arguments", message("maintainer", "Two past the cap."))
+
+    assert first["ok"] is True
+    assert first["message"]["id"] == "r1-msg-1000"
+    assert second["ok"] is True
+    assert second["message"]["id"] == "r1-msg-1001"
+
+
 def test_checkpoint_cli_writes_partial_and_event_log(tmp_path: Path) -> None:
     discussion = tmp_path / "discussion"
     state_path = tmp_path / "state.json"

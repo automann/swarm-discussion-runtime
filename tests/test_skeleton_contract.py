@@ -48,3 +48,7 @@ def test_cli_lists_same_planned_commands() -> None:
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["commands"] == swarm.planned_commands()
+
+
+def test_planned_commands_include_the_planned_commands_listing_itself() -> None:
+    assert "planned-commands" in swarm.planned_commands()

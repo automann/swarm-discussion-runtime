@@ -108,6 +108,7 @@ def validate_runtime_contract(contract: Any) -> dict[str, Any]:
         errors.append(_issue("missing_required_command", f"commands.{command}", "required plugin command is missing"))
 
     planned = set(planned_commands())
+    adapter_flagged: set[str] = set()
     for name, spec in commands.items():
         path = f"commands.{name}"
         if name not in planned:
@@ -119,7 +120,13 @@ def validate_runtime_contract(contract: Any) -> dict[str, Any]:
             errors.append(_issue("invalid_command_owner", f"{path}.owner", "runtime contract commands must be runtime-owned", spec.get("owner")))
         if spec.get("stability") != "contract":
             errors.append(_issue("invalid_command_stability", f"{path}.stability", "stable plugin commands must be contract"))
-        responsibilities = set(spec.get("responsibilities") or [])
+        for field in ("adapterFacing", "mutatesState"):
+            if not isinstance(spec.get(field), bool):
+                errors.append(_issue("invalid_boolean", f"{path}.{field}", "must be boolean", spec.get(field)))
+        if spec.get("adapterFacing") is True:
+            adapter_flagged.add(name)
+        _string_set(spec.get("produces", []), f"{path}.produces", errors)
+        responsibilities = _string_set(spec.get("responsibilities"), f"{path}.responsibilities", errors)
         overlap = sorted(responsibilities & FORBIDDEN_RUNTIME_RESPONSIBILITIES)
         for responsibility in overlap:
             errors.append(
@@ -132,6 +139,24 @@ def validate_runtime_contract(contract: Any) -> dict[str, Any]:
             )
 
     adapter_facing = _string_set(contract.get("adapterFacingCommands"), "adapterFacingCommands", errors)
+    for command in sorted(adapter_flagged - adapter_facing):
+        errors.append(
+            _issue(
+                "adapter_facing_mismatch",
+                f"commands.{command}.adapterFacing",
+                "command is flagged adapterFacing but missing from adapterFacingCommands",
+                command,
+            )
+        )
+    for command in sorted((adapter_facing & set(commands)) - adapter_flagged):
+        errors.append(
+            _issue(
+                "adapter_facing_mismatch",
+                "adapterFacingCommands",
+                "command is listed adapter-facing but its spec is not flagged adapterFacing",
+                command,
+            )
+        )
     missing_adapter_commands = sorted(REQUIRED_INTEGRATION_GATES - adapter_facing)
     for command in missing_adapter_commands:
         errors.append(_issue("missing_adapter_facing_command", "adapterFacingCommands", "adapter gate is not adapter-facing", command))
@@ -169,6 +194,19 @@ def validate_runtime_contract(contract: Any) -> dict[str, Any]:
                 "missing_runtime_forbidden_responsibility",
                 "boundaries.runtime.forbidden",
                 "runtime boundary must explicitly forbid this responsibility",
+                responsibility,
+            )
+        )
+
+    declared_forbidden = _string_set(
+        contract.get("forbiddenRuntimeResponsibilities"), "forbiddenRuntimeResponsibilities", errors
+    )
+    for responsibility in sorted(FORBIDDEN_RUNTIME_RESPONSIBILITIES - declared_forbidden):
+        errors.append(
+            _issue(
+                "missing_forbidden_responsibility",
+                "forbiddenRuntimeResponsibilities",
+                "contract must declare this forbidden runtime responsibility",
                 responsibility,
             )
         )
