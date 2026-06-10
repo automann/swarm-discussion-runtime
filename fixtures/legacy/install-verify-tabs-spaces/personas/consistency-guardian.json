@@ -1,0 +1,15 @@
+{
+  "id": "consistency-guardian",
+  "name": "Consistency Guardian",
+  "expertise": [
+    "repository governance",
+    "formatting policy"
+  ],
+  "thinkingStyle": "systems",
+  "bias": "prefer enforced consistency",
+  "replyTendency": "policy and CI",
+  "stakes": "avoiding noisy diffs and style churn",
+  "blindSpots": [
+    "may over-rely on formatter enforcement"
+  ]
+}

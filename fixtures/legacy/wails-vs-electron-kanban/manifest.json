@@ -1,0 +1,49 @@
+{
+  "id": "wails-vs-electron-kanban",
+  "title": "Golang Wails vs Electron for a Kanban Board desktop application",
+  "created": "2026-06-08",
+  "status": "completed",
+  "mode": "lightweight",
+  "currentPhase": "synthesized",
+  "currentRound": 1,
+  "schemaVersion": 2,
+  "personas": [
+    "native-go-engineer",
+    "web-frontend-pragmatist",
+    "moderator",
+    "contrarian"
+  ],
+  "tensionMap": [
+    {
+      "between": ["native-go-engineer", "web-frontend-pragmatist"],
+      "axis": "Minimize runtime footprint with a native Go backend (Wails) vs. maximize rendering consistency, ecosystem maturity, and delivery speed (Electron)",
+      "description": "Wails ships a tiny single binary with a native Go backend but renders through each OS's own webview (WebKit / WebView2 / WebKitGTK), inheriting per-platform inconsistency and a younger ecosystem. Electron guarantees one identical Chromium everywhere plus the full npm/DnD ecosystem, at the cost of ~100-200MB bundles and higher idle memory. A Kanban board is drag-and-drop-heavy and visually animated, which raises the stakes of rendering inconsistency; it is also not very CPU-bound, which weakens the case for a native backend. Both experts have a real, structurally-opposed claim on 'product quality.'"
+    }
+  ],
+  "problemDefinition": {
+    "statement": "Choose between Wails (Go + each OS's native webview) and Electron (bundled Chromium + Node) for building a cross-platform Kanban board desktop application.",
+    "scope": {
+      "includes": [
+        "cross-platform desktop (macOS, Windows, Linux)",
+        "drag-and-drop Kanban UI with animation",
+        "local persistence and offline use",
+        "distribution, code-signing, and auto-update",
+        "team skillset and delivery speed",
+        "runtime footprint (binary size, memory, startup)"
+      ],
+      "excludes": [
+        "web or mobile versions of the product",
+        "choice of cloud-sync backend",
+        "detailed pricing of code-signing certificates"
+      ]
+    },
+    "successCriteria": "A defensible recommendation that states the conditions under which each framework wins, backed by concrete evidence rather than reputation."
+  },
+  "initialTopics": [
+    {
+      "id": 1,
+      "topic": "Which framework best fits a cross-platform Kanban board, weighing footprint & native backend against rendering consistency, ecosystem, and delivery speed?",
+      "rationale": "The core decision and the axis of the designed tension."
+    }
+  ]
+}

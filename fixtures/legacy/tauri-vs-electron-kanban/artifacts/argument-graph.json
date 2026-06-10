@@ -1,0 +1,194 @@
+{
+  "discussionId": "tauri-vs-electron-kanban",
+  "nodes": [
+    {
+      "id": "r1-msg-001",
+      "from": "velocity-lead",
+      "type": "position_declaration"
+    },
+    {
+      "id": "r1-msg-002",
+      "from": "runtime-architect",
+      "type": "position_declaration"
+    },
+    {
+      "id": "r1-msg-003",
+      "from": "moderator",
+      "type": "opening"
+    },
+    {
+      "id": "r1-msg-004",
+      "from": "velocity-lead",
+      "type": "argument"
+    },
+    {
+      "id": "r1-msg-005",
+      "from": "runtime-architect",
+      "type": "argument"
+    },
+    {
+      "id": "r1-msg-006",
+      "from": "contrarian",
+      "type": "stress_test"
+    },
+    {
+      "id": "r1-msg-007",
+      "from": "velocity-lead",
+      "type": "response"
+    },
+    {
+      "id": "r1-msg-008",
+      "from": "runtime-architect",
+      "type": "response"
+    }
+  ],
+  "edges": [
+    {
+      "from": "r1-msg-004",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-002",
+      "toExpert": "runtime-architect",
+      "relation": "supports"
+    },
+    {
+      "from": "r1-msg-004",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-003",
+      "toExpert": "moderator",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-004",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-001",
+      "toExpert": "velocity-lead",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-005",
+      "fromExpert": "runtime-architect",
+      "to": "r1-msg-001",
+      "toExpert": "velocity-lead",
+      "relation": "counters"
+    },
+    {
+      "from": "r1-msg-005",
+      "fromExpert": "runtime-architect",
+      "to": "r1-msg-003",
+      "toExpert": "moderator",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-005",
+      "fromExpert": "runtime-architect",
+      "to": "r1-msg-002",
+      "toExpert": "runtime-architect",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-006",
+      "fromExpert": "contrarian",
+      "to": "r1-msg-005",
+      "toExpert": "runtime-architect",
+      "relation": "counters"
+    },
+    {
+      "from": "r1-msg-006",
+      "fromExpert": "contrarian",
+      "to": "r1-msg-004",
+      "toExpert": "velocity-lead",
+      "relation": "questions"
+    },
+    {
+      "from": "r1-msg-006",
+      "fromExpert": "contrarian",
+      "to": "r1-msg-003",
+      "toExpert": "moderator",
+      "relation": "questions"
+    },
+    {
+      "from": "r1-msg-006",
+      "fromExpert": "contrarian",
+      "to": "r1-msg-002",
+      "toExpert": "runtime-architect",
+      "relation": "counters"
+    },
+    {
+      "from": "r1-msg-007",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-006",
+      "toExpert": "contrarian",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-007",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-001",
+      "toExpert": "velocity-lead",
+      "relation": "supports"
+    },
+    {
+      "from": "r1-msg-007",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-005",
+      "toExpert": "runtime-architect",
+      "relation": "questions"
+    },
+    {
+      "from": "r1-msg-007",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-004",
+      "toExpert": "velocity-lead",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-007",
+      "fromExpert": "velocity-lead",
+      "to": "r1-msg-002",
+      "toExpert": "runtime-architect",
+      "relation": "counters"
+    },
+    {
+      "from": "r1-msg-008",
+      "fromExpert": "runtime-architect",
+      "to": "r1-msg-006",
+      "toExpert": "contrarian",
+      "relation": "supports"
+    },
+    {
+      "from": "r1-msg-008",
+      "fromExpert": "runtime-architect",
+      "to": "r1-msg-005",
+      "toExpert": "runtime-architect",
+      "relation": "counters"
+    },
+    {
+      "from": "r1-msg-008",
+      "fromExpert": "runtime-architect",
+      "to": "r1-msg-004",
+      "toExpert": "velocity-lead",
+      "relation": "extends"
+    },
+    {
+      "from": "r1-msg-008",
+      "fromExpert": "runtime-architect",
+      "to": "r1-msg-003",
+      "toExpert": "moderator",
+      "relation": "supports"
+    }
+  ],
+  "positionShifts": [
+    {
+      "type": "position_shift",
+      "expert": "runtime-architect",
+      "from": "Tauri @ conf 0.60, gated on a 5-eng-day WebKitGTK DnD spike (dnd-kit pointer path makes the classic drag bug moot).",
+      "to": "Tauri @ ~0.54 (near coin-flip); BROADEN the spike to a long-tail probe pass (print/PDF, codec/media, WebKitGTK version-skew matrix); concede engine-skew/print/codecs as genuinely unbounded Tauri risk and the shell as lower-stakes than sync/collaboration architecture.",
+      "trigger": [
+        "r1-msg-006",
+        "r1-msg-004"
+      ],
+      "reasoning": "Accepted the Contrarian's spike-selection-bias argument (the DnD spike validated the already-safe path) plus the conceded Rust CI/signing/notarization plumbing cost; velocity-lead's r1-msg-004 'near coin-flip' framing pulled confidence toward parity. Held short of full concession because file dialogs/notifications/updater/IME are bounded by stable Tauri v2 plugins."
+    }
+  ],
+  "edgeCount": 19
+}

@@ -1,0 +1,15 @@
+{
+  "id": "indentation-pragmatist",
+  "name": "Indentation Pragmatist",
+  "expertise": [
+    "developer ergonomics",
+    "tooling"
+  ],
+  "thinkingStyle": "pragmatic",
+  "bias": "prefer low-friction defaults",
+  "replyTendency": "operational nuance",
+  "stakes": "review time and mixed-editor compatibility",
+  "blindSpots": [
+    "may underweight accessibility benefits of tabs"
+  ]
+}

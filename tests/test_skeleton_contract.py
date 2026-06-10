@@ -52,3 +52,27 @@ def test_cli_lists_same_planned_commands() -> None:
 
 def test_planned_commands_include_the_planned_commands_listing_itself() -> None:
     assert "planned-commands" in swarm.planned_commands()
+
+
+def test_protocol_package_is_present_and_maps_to_real_commands() -> None:
+    protocol_dir = ROOT / "protocol"
+    for name in (
+        "README.md",
+        "PROTOCOL.md",
+        "SCHEMA.md",
+        "SEAM.md",
+        "durability.md",
+        "windowing.md",
+        "prompts.md",
+        "templates/persona-generator.md",
+    ):
+        assert (protocol_dir / name).exists(), name
+
+    readme = (protocol_dir / "README.md").read_text()
+    referenced = {
+        token.split("`")[0]
+        for token in readme.split("swarm-rt ")[1:]
+    }
+    implemented = set(swarm.planned_commands())
+    assert referenced, "mapping table must reference runtime commands"
+    assert referenced <= implemented, referenced - implemented

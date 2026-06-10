@@ -1,0 +1,94 @@
+{
+  "id": "install-verify-tabs-spaces",
+  "title": "tabs vs spaces",
+  "created": "2026-06-06T16:05:00Z",
+  "status": "complete",
+  "mode": "lightweight",
+  "currentPhase": "complete",
+  "currentRound": 1,
+  "schemaVersion": 2,
+  "personas": [
+    {
+      "id": "indentation-pragmatist",
+      "name": "Indentation Pragmatist",
+      "expertise": [
+        "developer ergonomics",
+        "tooling"
+      ],
+      "thinkingStyle": "pragmatic",
+      "bias": "prefer low-friction defaults",
+      "replyTendency": "operational nuance",
+      "stakes": "review time and mixed-editor compatibility",
+      "blindSpots": [
+        "may underweight accessibility benefits of tabs"
+      ]
+    },
+    {
+      "id": "consistency-guardian",
+      "name": "Consistency Guardian",
+      "expertise": [
+        "repository governance",
+        "formatting policy"
+      ],
+      "thinkingStyle": "systems",
+      "bias": "prefer enforced consistency",
+      "replyTendency": "policy and CI",
+      "stakes": "avoiding noisy diffs and style churn",
+      "blindSpots": [
+        "may over-rely on formatter enforcement"
+      ]
+    },
+    {
+      "id": "moderator",
+      "name": "Moderator",
+      "expertise": [
+        "facilitation"
+      ],
+      "thinkingStyle": "framing",
+      "bias": "surface real fault lines",
+      "replyTendency": "quality gate",
+      "stakes": "preventing fake consensus",
+      "blindSpots": []
+    },
+    {
+      "id": "contrarian",
+      "name": "Contrarian",
+      "expertise": [
+        "stress testing"
+      ],
+      "thinkingStyle": "adversarial",
+      "bias": "attack consensus",
+      "replyTendency": "failure scenario",
+      "stakes": "catching hidden assumptions",
+      "blindSpots": []
+    }
+  ],
+  "tensionMap": [
+    {
+      "between": [
+        "indentation-pragmatist",
+        "consistency-guardian"
+      ],
+      "axis": "greenfield default vs existing convention enforcement",
+      "description": "Both value consistency, but one starts from developer friction while the other starts from governance and CI."
+    }
+  ],
+  "problemDefinition": {
+    "statement": "Choose an indentation policy for source code without turning style preference into review churn.",
+    "scope": {
+      "includes": [
+        "existing repositories",
+        "greenfield defaults",
+        "formatter enforcement"
+      ],
+      "excludes": [
+        "large formatter migrations"
+      ]
+    },
+    "successCriteria": [
+      "clear rule",
+      "minimal churn",
+      "tool-enforced consistency"
+    ]
+  }
+}

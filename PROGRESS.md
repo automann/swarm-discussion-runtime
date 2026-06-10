@@ -432,3 +432,43 @@ Use this shape for every future implementation round:
 - Next: Import at least one real legacy discussion artifact as a fixture, then
   build the plugin-side wrapper that drives one lightweight phase through these
   primitives.
+
+## 2026-06-11 - Phase 7 Runtime-As-Source-Of-Truth Foundations
+
+- Commit: this commit.
+- Roadmap alignment: New Phase 7 (host adapter split). Also closes two
+  long-open completion items: "real legacy smoke fixtures are represented"
+  and "trace/evidence works on at least one real discussion artifact".
+- Work summary: Decision recorded: instead of evolving the merged plugin tree
+  in `swarm-discussion`, the runtime repo becomes the host-agnostic source of
+  truth with one adapter repo per coding agent (built by that host's native
+  agent) and `swarm-discussion` rebuilt as a thin aggregator of certified
+  releases. This round laid the runtime-side foundations: imported three real
+  discussions from the published plugin line into `fixtures/legacy/`
+  (one complete, two incomplete-and-diagnosed); imported the byte-identical
+  protocol semantics docs from `swarm-discussion@96eb5f2` into `protocol/`
+  with a legacy-mechanics-to-runtime-command mapping; added
+  `scripts/vendor.py` (pinned-SHA vendoring with hash manifest, drift and
+  unmanifested-file detection, self-sufficient bundle including the minimal-v2
+  fixture); added `conformance/certify_adapter.py` (contract + vendor-manifest
+  + adapter-smoke + validate-loop + validate-discussion verdict) and
+  `docs/ADAPTER-SPEC.md` defining adapter deliverables, the entry-contract
+  must-nots, and the certification bar.
+- Verification: `.venv/bin/python -m pytest` passed with 166 tests. The real
+  `tauri-vs-electron-kanban` discussion validates clean and traces
+  on-track/none; vendor/verify round-trips and detects tampering; the
+  certification kit passes on the minimal-v2 fixture against both the local
+  and a vendored runtime, and fails on a corrupted discussion.
+- Failure coverage: New tests pin incomplete real discussions being diagnosed
+  (not accepted), vendored-tree drift and unmanifested files failing verify,
+  and certification failing on a broken collect-result.
+- AgenTeam review: This adopts the AgenTeam disciplines at the repo-topology
+  level: a contract-validated core, manifest-pinned distribution, and
+  certification gates instead of cross-agent code review. The role pipeline is
+  still not copied; adapters stay thin shells per NON_GOALS.
+- Drift status: ON TRACK. The runtime did not change this round; only
+  fixtures, protocol docs, distribution tooling, and specs were added.
+- Next: Build `swarm-discussion-claude` natively (first adapter, per
+  decision), certify it against a real Claude-driven discussion, then hand
+  `docs/ADAPTER-SPEC.md` plus the salvaged wrapper reference to Codex for
+  `swarm-discussion-codex`.

@@ -119,3 +119,28 @@ Acceptance:
 
 - Default install still grants no broad tools to ordinary experts.
 - Tool-derived evidence cannot be cited unless logged and validated.
+
+## Phase 7: Host Adapter Split
+
+Goal: make this repo the host-agnostic source of truth, with one adapter repo
+per coding agent and a thin aggregation repo for distribution.
+
+Deliverables:
+
+- host-agnostic `protocol/` package (single copy of discussion semantics).
+- real legacy discussion fixtures under `fixtures/legacy/`.
+- `scripts/vendor.py` pinned-SHA vendoring with manifest verify.
+- `conformance/certify_adapter.py` certification kit and `docs/ADAPTER-SPEC.md`.
+- `swarm-discussion-claude` adapter repo, built and certified natively by
+  Claude Code.
+- `swarm-discussion-codex` adapter repo, built and certified natively by
+  Codex from the spec plus its prior wrapper work.
+- `swarm-discussion` rebuilt as a thin aggregator of certified releases.
+
+Acceptance:
+
+- A real legacy discussion validates and traces clean from this repo alone.
+- An adapter built only from `docs/ADAPTER-SPEC.md` and the vendored bundle
+  passes certification on a real host-driven discussion.
+- Neither adapter repo forks protocol semantics or runtime mechanics.
+- The published plugin line keeps shipping until both adapters certify.

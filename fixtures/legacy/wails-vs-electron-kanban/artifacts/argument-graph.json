@@ -1,0 +1,38 @@
+{
+  "discussionId": "wails-vs-electron-kanban",
+  "nodes": [
+    {"id": "r1-msg-001", "from": "native-go-engineer", "type": "position_declaration", "gist": "Wails on footprint (8-15MB/30-60MB) + Go backend. Conf 0.62."},
+    {"id": "r1-msg-002", "from": "web-frontend-pragmatist", "type": "position_declaration", "gist": "Electron — one Chromium = identical dnd-kit drag fidelity + React ecosystem. Conf 0.70."},
+    {"id": "r1-msg-003", "from": "moderator", "type": "opening", "gist": "Crux = is one Chromium load-bearing for fidelity or insurance; Go backend asset or red herring. Budget 5/10."},
+    {"id": "r1-msg-004", "from": "native-go-engineer", "type": "argument", "gist": "Concedes drag identity untested + Go backend red herring; conf 0.55; 1-week PoC; fidelity-gate rule."},
+    {"id": "r1-msg-005", "from": "web-frontend-pragmatist", "type": "argument", "gist": "Concedes footprint real + Go red herring; names 5 WebKitGTK drag-failure modes; residual edge = auto-update + ecosystem."},
+    {"id": "r1-msg-006", "from": "contrarian", "type": "stress_test", "gist": "PoC is n-of-1 not fleet-valid; TCO is the dominant unmeasured cost; Tauri ignored as a hedge."},
+    {"id": "r1-msg-007", "from": "native-go-engineer", "type": "response", "gist": "Shift minor: fleet-matrix gate; reclaims bounded Go maintenance; adopts Tauri as host-swap hedge. Holds Wails."},
+    {"id": "r1-msg-008", "from": "web-frontend-pragmatist", "type": "response", "gist": "Shift minor 0.70->~0.68: one Chromium = variance-reduction insurance; owns TCO; rejects Tauri as fidelity hedge. Holds Electron."}
+  ],
+  "edges": [
+    {"from": "r1-msg-004", "to": "r1-msg-002", "relation": "supports"},
+    {"from": "r1-msg-004", "to": "r1-msg-003", "relation": "supports"},
+    {"from": "r1-msg-004", "to": "r1-msg-001", "relation": "extends"},
+    {"from": "r1-msg-005", "to": "r1-msg-001", "relation": "counters"},
+    {"from": "r1-msg-005", "to": "r1-msg-003", "relation": "extends"},
+    {"from": "r1-msg-006", "to": "r1-msg-004", "relation": "counters"},
+    {"from": "r1-msg-006", "to": "r1-msg-005", "relation": "questions"},
+    {"from": "r1-msg-006", "to": "r1-msg-003", "relation": "extends"},
+    {"from": "r1-msg-007", "to": "r1-msg-006", "relation": "supports"},
+    {"from": "r1-msg-007", "to": "r1-msg-004", "relation": "extends"},
+    {"from": "r1-msg-007", "to": "r1-msg-005", "relation": "counters"},
+    {"from": "r1-msg-007", "to": "r1-msg-002", "relation": "questions"},
+    {"from": "r1-msg-008", "to": "r1-msg-006", "relation": "extends"},
+    {"from": "r1-msg-008", "to": "r1-msg-006", "relation": "supports"},
+    {"from": "r1-msg-008", "to": "r1-msg-006", "relation": "counters"},
+    {"from": "r1-msg-008", "to": "r1-msg-004", "relation": "supports"},
+    {"from": "r1-msg-008", "to": "r1-msg-005", "relation": "extends"},
+    {"from": "r1-msg-008", "to": "r1-msg-001", "relation": "questions"}
+  ],
+  "edgeCount": 18,
+  "positionShifts": [
+    {"expert": "native-go-engineer", "magnitude": "minor", "trigger": "r1-msg-006"},
+    {"expert": "web-frontend-pragmatist", "magnitude": "minor", "trigger": "r1-msg-006"}
+  ]
+}

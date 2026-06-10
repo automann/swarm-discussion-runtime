@@ -1,0 +1,134 @@
+{
+  "id": "tauri-vs-electron-kanban",
+  "title": "Rust Tauri vs Electron for a Kanban Board desktop application",
+  "created": "2026-06-07",
+  "status": "completed",
+  "mode": "lightweight",
+  "currentPhase": "synthesis",
+  "currentRound": 1,
+  "schemaVersion": 2,
+  "personas": [
+    {
+      "id": "velocity-lead",
+      "name": "Shipping-Velocity Frontend Lead",
+      "expertise": [
+        "Electron app delivery",
+        "React/TypeScript frontend",
+        "drag-and-drop UX libraries (dnd-kit, react-beautiful-dnd)",
+        "cross-platform packaging & auto-update"
+      ],
+      "thinkingStyle": "pragmatic",
+      "bias": "optimizes for time-to-market and reuse of the mature JS ecosystem; treats RAM/disk as cheap",
+      "replyTendency": "cites specific npm libraries, real shipped apps, and concrete sprint timelines",
+      "stakes": "misses the launch window or the team can't maintain an unfamiliar Rust stack, and the product dies",
+      "blindSpots": [
+        "discounts per-user resource cost and install size",
+        "underweights long-term security/maintenance of bundled Chromium"
+      ],
+      "keyQuestions": [
+        "What is the realistic delta in weeks to a first shippable cross-platform build?",
+        "Can the team hire for and maintain Rust without slowing feature velocity?"
+      ]
+    },
+    {
+      "id": "runtime-architect",
+      "name": "Native Runtime / Performance Architect",
+      "expertise": [
+        "Rust / Tauri",
+        "system webview internals (WebView2 / WKWebView / WebKitGTK)",
+        "memory & binary-size budgeting",
+        "desktop security hardening"
+      ],
+      "thinkingStyle": "analytical",
+      "bias": "optimizes for runtime footprint, native feel, and security surface; treats bundled Chromium as waste",
+      "replyTendency": "cites memory benchmarks, binary sizes, CVE surface, and OS webview differences",
+      "stakes": "ships a 200MB / 300MB-RAM app users uninstall; personally owns the resource and security budget",
+      "blindSpots": [
+        "underestimates cross-platform webview inconsistency cost, especially Linux WebKitGTK",
+        "discounts ecosystem/library gaps that slow feature delivery"
+      ],
+      "keyQuestions": [
+        "What is the install size and idle-RAM target?",
+        "How do we guarantee consistent rendering and drag-and-drop across three OS webviews?"
+      ]
+    },
+    {
+      "id": "moderator",
+      "name": "Moderator",
+      "expertise": [
+        "facilitation",
+        "quality gates",
+        "convergence judgment"
+      ],
+      "thinkingStyle": "analytical",
+      "bias": "prevents premature consensus",
+      "replyTendency": "frames real fault lines and poses targeted questions",
+      "stakes": "the discussion produces polite agreement instead of a tested decision",
+      "blindSpots": [
+        "can over-engineer disagreement"
+      ]
+    },
+    {
+      "id": "contrarian",
+      "name": "Contrarian",
+      "expertise": [
+        "consensus stress-testing",
+        "failure-scenario construction"
+      ],
+      "thinkingStyle": "creative",
+      "bias": "attacks the strongest consensus",
+      "replyTendency": "constructs concrete failure scenarios and cites message IDs",
+      "stakes": "an echo chamber ships an untested decision",
+      "blindSpots": [
+        "can be contrary past the point of usefulness"
+      ]
+    }
+  ],
+  "tensionMap": [
+    {
+      "between": [
+        "velocity-lead",
+        "runtime-architect"
+      ],
+      "axis": "ship fast on a mature, uniform Chromium+JS stack vs. ship lean/native on Rust+system-webview, trading ecosystem maturity and rendering uniformity for footprint, performance, and security",
+      "description": "velocity-lead owns delivery and is measured on launch date and maintainability with the team's existing JS skills; runtime-architect owns the resource and security budget and native quality. Both are right within their mandate \u2014 the disagreement is which risk dominates for a Kanban app."
+    }
+  ],
+  "problemDefinition": {
+    "statement": "Choose the desktop app framework \u2014 Rust/Tauri or Electron \u2014 for a Kanban board application, optimizing the tradeoff between delivery speed/ecosystem and runtime footprint/native quality.",
+    "scope": {
+      "includes": [
+        "framework choice",
+        "drag-and-drop UX feasibility & rendering consistency",
+        "packaging/distribution & auto-update",
+        "resource footprint (RAM, install size, battery)",
+        "security & long-term maintenance",
+        "team skill fit"
+      ],
+      "excludes": [
+        "backend/sync architecture",
+        "specific kanban feature scope",
+        "pricing/business model"
+      ]
+    },
+    "successCriteria": "A defensible recommendation with the conditions under which each framework wins, the key risks, and what evidence would flip the decision."
+  },
+  "initialTopics": [
+    {
+      "id": 1,
+      "topic": "Drag-and-drop UX feasibility and rendering consistency across OS webviews",
+      "rationale": "Kanban is drag-heavy; rendering uniformity is the load-bearing UX risk."
+    },
+    {
+      "id": 2,
+      "topic": "Resource footprint, install size, and distribution",
+      "rationale": "The headline reason teams leave Electron; must be quantified, not assumed."
+    },
+    {
+      "id": 3,
+      "topic": "Team velocity, hiring, and long-term maintenance/security",
+      "rationale": "The decision lives for years; skill fit and maintenance cost often dominate."
+    }
+  ],
+  "completed": "2026-06-07T15:18:38Z"
+}

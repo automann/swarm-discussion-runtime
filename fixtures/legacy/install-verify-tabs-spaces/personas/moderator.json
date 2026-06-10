@@ -1,0 +1,12 @@
+{
+  "id": "moderator",
+  "name": "Moderator",
+  "expertise": [
+    "facilitation"
+  ],
+  "thinkingStyle": "framing",
+  "bias": "surface real fault lines",
+  "replyTendency": "quality gate",
+  "stakes": "preventing fake consensus",
+  "blindSpots": []
+}

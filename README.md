@@ -31,6 +31,14 @@ pipeline:
 brief -> prompt-build -> collect-merge -> WAL -> validate -> trace/evidence
 ```
 
+## Topology
+
+This repository is the host-agnostic source of truth. Host adapters live in
+separate repos (one per coding agent, owned by that host's native agent) and
+vendor this runtime at a pinned SHA via `scripts/vendor.py`. The published
+`swarm-discussion` repo becomes a thin aggregator of certified adapter
+releases. See `docs/ADAPTER-SPEC.md`.
+
 ## Repository Map
 
 ```text
@@ -41,16 +49,21 @@ PROGRESS.md               per-round roadmap alignment and drift review ledger
 ACCEPTANCE.md             proof points and falsifiers
 NON_GOALS.md              explicit exclusions
 SMOKE-AUDIT-CHECKLIST.md  trace/evidence review checklist
+docs/ADAPTER-SPEC.md      host adapter contract and certification definition
 docs/HOST-ADAPTERS.md     Codex and Claude thin host-adapter recipes
 docs/RUNTIME-PACKAGE-BOUNDARY.md runtime/plugin ownership contract
 docs/CAPABILITY-PROFILES.md expert capability profile contract
 docs/FUTURE-EXECUTORS.md  coordinator/executor research notes
+protocol/                 host-agnostic discussion protocol semantics
 profiles/                 built-in expert capability profiles
 runtime-contract.json     machine-readable plugin/runtime contract
 runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
+scripts/vendor.py         pinned-SHA vendoring into adapter repos
+conformance/              adapter certification kit
 tests/                    contract and smoke tests
-fixtures/                 phase fixtures and the minimal-v2 e2e loop anchor
+fixtures/                 phase fixtures, minimal-v2 e2e anchor, real legacy
+                          discussions under fixtures/legacy/
 schemas/                  runtime artifact schemas
 references/               source-plan and legacy-reference notes
 ```
@@ -83,6 +96,9 @@ python3 runtime/swarm_rt.py validate-host-step fixtures/phase5/codex-host-step.j
 python3 runtime/swarm_rt.py capability-doctor
 python3 runtime/swarm_rt.py validate-round fixtures/phase1/discussions/complete/rounds/001.json
 python3 runtime/swarm_rt.py validate-discussion fixtures/phase1/discussions/complete
+python3 runtime/swarm_rt.py validate-discussion fixtures/legacy/tauri-vs-electron-kanban
+python3 scripts/vendor.py vendor --dest /tmp/swarm-vendor
+python3 conformance/certify_adapter.py --discussion fixtures/e2e/minimal-v2 --vendored /tmp/swarm-vendor
 python3 -m pytest
 ```
 
