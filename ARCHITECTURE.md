@@ -1,5 +1,32 @@
 # Architecture
 
+## Repository Topology
+
+`swarm-discussion-runtime` is the host-agnostic source of truth. Host adapters
+and the published distribution repo are built around it:
+
+```text
+swarm-discussion-runtime    this repo: runtime mechanics, protocol semantics,
+                            schemas, profiles, vendor bundle, certification
+swarm-discussion-<host>     one adapter repo per coding agent, owned by that
+                            host's native agent; vendors this runtime at a
+                            pinned SHA (scripts/vendor.py)
+swarm-discussion            thin aggregation repo: marketplace manifests and
+                            release bundles assembled from certified adapter
+                            releases
+```
+
+| Repo | Owns | Must Not Own |
+|---|---|---|
+| runtime (this repo) | protocol semantics, runtime mechanics, schemas, profiles, vendor bundle + manifest tooling, certification gates, adapter spec | host-specific skill text or spawn primitives, marketplace/installer packaging, subjective product decisions |
+| adapter (`swarm-discussion-<host>`) | host bootstrap, thin wrapper (discovery/doctor/gate delegation), host agent definitions, host-native smoke, read-only vendored runtime | protocol semantics, runtime mechanics, forked validators, edits to vendored files |
+| aggregation (`swarm-discussion`) | marketplace manifests, release assembly from certified adapter releases, install docs | protocol logic, runtime logic, adapter logic |
+
+Cross-host consistency comes from `runtime-contract.json`,
+`docs/ADAPTER-SPEC.md`, and `conformance/certify_adapter.py` — not from shared
+code or cross-agent code review. Each adapter is built and tested by the agent
+native to its host.
+
 ## Target Model
 
 `swarm-discussion-runtime` is a local discussion runtime. It turns a parent
@@ -127,6 +154,21 @@ transport records, prompt artifacts, trace, and evidence are audit surfaces.
 
 Default experts must stay conservative. Toolful profiles require explicit
 opt-in, separate names, and validator support.
+
+## Distribution And Versioning
+
+- Adapters consume the runtime via `scripts/vendor.py vendor --dest ...`,
+  which copies the adapter-facing bundle (runtime, schemas, profiles,
+  `protocol/`, `runtime-contract.json`, the minimal-v2 fixture) and writes
+  `vendor-manifest.json` pinning the runtime git SHA plus a sha256 per file.
+- The vendored tree is read-only for adapters; `scripts/vendor.py verify`
+  fails loudly on drifted or unmanifested files. Updating means re-vendoring
+  from a new runtime SHA, never editing in place.
+- `runtime-contract.json: runtime.compatibility` is the compatibility string
+  adapters must surface in their release notes alongside the pinned SHA.
+- An adapter release is acceptable only with a passing
+  `conformance/certify_adapter.py` verdict against a real host-driven
+  discussion (see `docs/ADAPTER-SPEC.md`). Re-certify on every re-vendor.
 
 ## Influences
 

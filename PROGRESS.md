@@ -472,3 +472,47 @@ Use this shape for every future implementation round:
   decision), certify it against a real Claude-driven discussion, then hand
   `docs/ADAPTER-SPEC.md` plus the salvaged wrapper reference to Codex for
   `swarm-discussion-codex`.
+
+## 2026-06-11 - Governance Refresh For Source-Of-Truth Role
+
+- Commit: this commit.
+- Roadmap alignment: Phase 7 cross-cutting guardrail. The repository's
+  responsibilities changed (incubator -> host-agnostic source of truth), so
+  the governance docs that steer every future agent round had to change with
+  them before adapter work begins.
+- Work summary: Rewrote `AGENTS.md` for the steward role: three new
+  non-negotiable principles (single-copy protocol/runtime semantics, the
+  adapter-facing surface as a public contract changed only with
+  contract/spec/schema/tests together, vendored-bundle self-sufficiency), new
+  boundaries (no host-specific code, no distribution packaging, keep
+  `scripts/vendor.py` BUNDLE and `docs/ADAPTER-SPEC.md` in sync), and replaced
+  the spent First Proof Point section with the Phase 7 standing bar.
+  Restructured `ACCEPTANCE.md`: first proof point marked met and pinned,
+  standing runtime acceptance updated to the hardened invariants, a new
+  Source-Of-Truth Acceptance section, adapter milestone checklist, expanded
+  falsifiers (vendored-file patching, gates-pass-but-hosts-break, per-host
+  semantic divergence), and the incubator completion definition retired to a
+  historical record with per-item status. `ARCHITECTURE.md` gained the
+  repository topology with a per-repo owns/must-not-own table and a
+  Distribution And Versioning section. `NON_GOALS.md` rewritten for the new
+  topology: Not A Host Adapter, Not The Distribution Repo, Not A Per-Host
+  Fork Farm; legacy sections retained. README intro/status updated from
+  incubator language to the steward role; `docs/RUNTIME-PACKAGE-BOUNDARY.md`
+  reframed as the in-process ownership split with the migration rule replaced
+  by the vendoring rule.
+- Verification: `.venv/bin/python -m pytest` passed with 167 tests, including
+  a new governance drift-guard test asserting the docs reference the real
+  spec/vendor/certification artifacts and keep the topology sections.
+- Failure coverage: Process-level change. The drift guard fails loudly if a
+  future round deletes the adapter spec, vendor script, certification kit, or
+  the topology/non-goal sections the governance now depends on.
+- AgenTeam review: Keeps the AgenTeam-inspired governance discipline current
+  with reality: the operating contract, acceptance bar, and non-goals now
+  describe the actual repository role, so drift review in future rounds
+  compares against the right target. No role pipeline or packaging scope was
+  added.
+- Drift status: ON TRACK. No runtime or protocol semantics changed; only
+  governance and one drift-guard test.
+- Next: Scaffold `swarm-discussion-claude`, vendor the runtime at the current
+  SHA, implement the thin wrapper and Claude skill per `docs/ADAPTER-SPEC.md`,
+  and certify against a real Claude-driven discussion.

@@ -1,10 +1,13 @@
 # swarm-discussion-runtime
 
-Greenfield runtime incubator for the next `swarm-discussion` architecture.
+Host-agnostic discussion runtime and source of truth for the
+`swarm-discussion` plugin family.
 
-This repository is not a replacement plugin yet. It exists to prove the new
-runtime model before it is folded back into the published `swarm-discussion`
-plugin line.
+This repository started as a greenfield incubator proving the v2 runtime
+model. The proof point passed; the repo now owns the runtime mechanics, the
+protocol semantics, the artifact schemas, the vendorable adapter bundle, and
+the adapter certification gates. It is never folded back into a plugin —
+host adapters vendor it at a pinned SHA.
 
 ## Thesis
 
@@ -14,22 +17,26 @@ that asks the parent agent to manually execute a protocol.
 The parent agent should provide a brief, select a mode, launch host primitives
 when necessary, and consume final evidence. The runtime should own prompt
 construction, fan-in collection, WAL checkpoints, validation, trace, and
-portable evidence.
+portable evidence. Host adapters stay thin shells that map spawn/wait
+primitives and call runtime commands.
 
 ## Current Status
 
-Phase 6 runtime primitives are underway. The CLI now includes fan-in merge,
-artifact validation, context summary, prompt-build helpers, WAL helpers,
-trace/evidence with capability summaries, thin host-step validation, and
-capability profile reports. The first end-to-end fixture and adapter smoke
-command now anchor the smallest complete v2 loop.
-
-The first milestone is not feature parity. It is proving the smallest runtime
-pipeline:
+Phases 0-6 are complete and hardened: fan-in merge, artifact validation,
+context summary, prompt-build, WAL helpers, trace/evidence with capability
+summaries, thin host-step validation, capability profiles, transport artifact
+helpers, and the machine-readable runtime contract — all behind 160+ tests,
+anchored by the minimal-v2 fixture and real legacy discussion fixtures. The
+original proof pipeline is pinned end-to-end on a fresh directory:
 
 ```text
 brief -> prompt-build -> collect-merge -> WAL -> validate -> trace/evidence
 ```
+
+Phase 7 (host adapter split) is in progress: the protocol package, legacy
+fixtures, vendoring tooling, and certification kit have landed. Next are the
+per-host adapter repos (`swarm-discussion-claude` first), then the published
+`swarm-discussion` repo thins into an aggregator of certified releases.
 
 ## Topology
 

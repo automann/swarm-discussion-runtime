@@ -76,3 +76,31 @@ def test_protocol_package_is_present_and_maps_to_real_commands() -> None:
     implemented = set(swarm.planned_commands())
     assert referenced, "mapping table must reference runtime commands"
     assert referenced <= implemented, referenced - implemented
+
+
+def test_governance_docs_reflect_source_of_truth_role() -> None:
+    # The artifacts the governance docs lean on must exist.
+    for path in (
+        "docs/ADAPTER-SPEC.md",
+        "scripts/vendor.py",
+        "conformance/certify_adapter.py",
+        "protocol/README.md",
+        "fixtures/legacy/README.md",
+    ):
+        assert (ROOT / path).exists(), path
+
+    agents = (ROOT / "AGENTS.md").read_text()
+    assert "ADAPTER-SPEC" in agents
+    assert "scripts/vendor.py" in agents
+
+    acceptance = (ROOT / "ACCEPTANCE.md").read_text()
+    assert "certify_adapter.py" in acceptance
+    assert "fixtures/legacy" in acceptance
+
+    architecture = (ROOT / "ARCHITECTURE.md").read_text()
+    assert "Repository Topology" in architecture
+    assert "vendor-manifest.json" in architecture
+
+    non_goals = (ROOT / "NON_GOALS.md").read_text()
+    assert "Not A Host Adapter" in non_goals
+    assert "Not The Distribution Repo" in non_goals

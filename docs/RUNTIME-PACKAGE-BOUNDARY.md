@@ -1,7 +1,9 @@
 # Runtime Package Boundary
 
-This document defines how the published `swarm-discussion` plugin should call
-the greenfield runtime without copying protocol logic back into skill text.
+This document defines the in-process ownership split between skill prompt,
+host adapter, and runtime. It applies to every host adapter built against this
+runtime; repo-level topology, vendoring, and certification live in
+`docs/ADAPTER-SPEC.md`.
 
 The machine-readable source of truth is `runtime-contract.json`.
 
@@ -96,13 +98,12 @@ transport, rounds, capabilities, trace, and evidence. Plugin code should pass
 paths to runtime commands instead of reading and reinterpreting these artifacts
 inside skill prompt text.
 
-## Migration Rule
+## Vendoring Rule
 
-When moving this runtime into the published plugin line, prefer one of these
-integration styles:
-
-- Package the runtime as a CLI and call it from the skill/adapter.
-- Vendor the runtime package as code and keep the same command contracts.
+Adapters consume this runtime by vendoring the bundle at a pinned SHA with
+`scripts/vendor.py` (see `docs/ADAPTER-SPEC.md`). The vendored tree is
+read-only; updating means re-vendoring and re-certifying, never editing in
+place.
 
 Do not paste runtime semantics into `SKILL.md`. The skill should remain a thin
 operator guide over the package boundary.

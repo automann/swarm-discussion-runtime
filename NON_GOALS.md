@@ -1,12 +1,24 @@
 # Non-Goals
 
-These are intentionally out of scope for the incubator until the runtime proof
-point passes.
+These are intentionally out of scope for this repository under the
+source-of-truth topology: runtime core here, one adapter repo per host, a thin
+aggregation repo for distribution.
 
-## Not A Product Fork Yet
+## Not A Host Adapter
 
-This repo is not the published plugin line. Do not start with marketplace,
-plugin bundle, or npm wrapper work.
+No host-specific code lives here: no skill text, no spawn/wait primitives, no
+host wrappers, no host agent definitions. Those belong to the per-host adapter
+repos (`swarm-discussion-<host>`), each built and tested by that host's native
+agent against `docs/ADAPTER-SPEC.md`. This repo ships the bundle and the
+gates; it never ships a runnable plugin.
+
+## Not The Distribution Repo
+
+No marketplace manifests, plugin bundles for install, npm wrappers, or
+installer tooling. Release assembly and distribution belong to the thin
+`swarm-discussion` aggregation repo, which only accepts certified adapter
+releases. This repo's distribution surface ends at `scripts/vendor.py` and the
+vendor manifest.
 
 ## Not AgenTeam
 
@@ -39,10 +51,19 @@ must be separately named, explicit, and validator-backed.
 
 ## Not A Compatibility Exercise
 
-Old plugin behavior is evidence and fixture material. It is not automatically
-the target architecture.
+Old plugin behavior is evidence and fixture material (`fixtures/legacy/`,
+`references/`). It is not automatically the target architecture, and the
+runtime is never bent to reproduce a legacy quirk without a named, tested
+reason.
 
 ## Not A Host Runtime Replacement
 
 This repo does not own Codex or Claude spawn/wait primitives. It defines the
-runtime contract around those primitives.
+runtime contract around those primitives; adapters map them.
+
+## Not A Per-Host Fork Farm
+
+There is exactly one copy of the protocol semantics (`protocol/`) and one copy
+of the runtime mechanics (`runtime/`). If a host appears to need its own
+variant of either, that is a falsifier (see `ACCEPTANCE.md`), not a reason to
+fork.
