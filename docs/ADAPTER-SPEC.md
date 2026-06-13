@@ -57,6 +57,8 @@ evidence, not assumption.
 - `docs/HOST-ADAPTERS.md` — concrete Codex and Claude recipes.
 - `docs/RUNTIME-PACKAGE-BOUNDARY.md` — ownership boundaries.
 - `protocol/` — discussion semantics (single source of truth; do not fork).
+- `protocol/templates/context-generator.md` — the parent-brief authoring guide
+  consumed by `context-build`.
 - `schemas/host-transport.schema.json` — the host-step metadata packet.
 
 ## Adapter deliverables

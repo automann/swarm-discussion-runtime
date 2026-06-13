@@ -707,3 +707,24 @@ Use this shape for every future implementation round:
 - Next: plan 005 (context-generator template). Deferred: the old-vs-new
   cost/quality benchmark (post first real adapter discussion) is now unblocked
   on the runtime side.
+
+## 2026-06-11 - Plan 005: Context-Generator Template
+
+- Commit: this entry.
+- Roadmap alignment: plans/005. Ships the founding document's one named
+  deliverable (a context-generator template alongside persona-generator).
+- Work summary: Added `protocol/templates/context-generator.md` documenting the
+  brief schema (mirrors context.py), field-writing guidance, a worked example
+  (the phase2 brief), the context-build error codes, and the per-round
+  re-alignment note. Referenced it from protocol/README and ADAPTER-SPEC
+  required reading; pinned it in the protocol-inventory and vendor-manifest
+  tests so it ships in every adapter bundle.
+- Verification: `.venv/bin/python -m pytest` 194 pass. Field cross-check
+  (template vs context.py) shows no divergence; the template is present in the
+  vendored bundle.
+- Failure coverage: inventory + vendor tests fail loudly if the template is
+  dropped from the package or the bundle.
+- AgenTeam review: documentation of the existing brief schema; no code change.
+  context.py remains authoritative if the table ever drifts.
+- Drift status: ON TRACK.
+- Next: plan 006 (consolidate shared helpers) — runs last; touches most modules.

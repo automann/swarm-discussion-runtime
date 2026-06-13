@@ -43,6 +43,7 @@ def test_vendor_produces_pinned_manifest_and_runnable_bundle(tmp_path: Path) -> 
         "runtime/swarm/wal.py",
         "runtime-contract.json",
         "protocol/PROTOCOL.md",
+        "protocol/templates/context-generator.md",
         "schemas/evidence.schema.json",
         "profiles/expert-basic.json",
         "fixtures/e2e/minimal-v2/manifest.json",

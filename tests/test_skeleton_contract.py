@@ -65,6 +65,7 @@ def test_protocol_package_is_present_and_maps_to_real_commands() -> None:
         "windowing.md",
         "prompts.md",
         "templates/persona-generator.md",
+        "templates/context-generator.md",
     ):
         assert (protocol_dir / name).exists(), name
 
