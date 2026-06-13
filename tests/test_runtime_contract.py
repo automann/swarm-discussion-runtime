@@ -160,3 +160,12 @@ def test_contract_rejects_adapter_facing_flag_drift() -> None:
 
     assert result["ok"] is False
     assert any(error["code"] == "adapter_facing_mismatch" for error in result["errors"])
+
+
+def test_contract_lists_init_as_adapter_facing() -> None:
+    contract = load_contract()
+    assert "init" in contract["commands"]
+    assert contract["commands"]["init"]["adapterFacing"] is True
+    assert "init" in contract["adapterFacingCommands"]
+    result = validate_runtime_contract(contract)
+    assert result["ok"] is True, result["errors"]

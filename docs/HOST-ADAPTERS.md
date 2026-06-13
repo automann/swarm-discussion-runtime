@@ -26,6 +26,9 @@ host logs.
 
 ## Shared Runtime Flow
 
+Each discussion starts with `init` (scaffolds the directory and `manifest.json`);
+then, per phase:
+
 1. `context-build` turns the user's brief into `context/summary.md`.
 2. `prompt-build` creates one prompt artifact per agent for the current phase.
 3. The host adapter spawns agents from those prompt artifacts.
@@ -35,6 +38,9 @@ host logs.
    declared spawn order.
 7. `append-message`, `checkpoint`, and `finalize-round` own WAL mutation.
 8. `trace` and `evidence` summarize health and portable audit data.
+
+`finalize-round` derives `metadata` and `timestamp` from the round when the
+caller omits them; caller-supplied values are validated, not overwritten.
 
 ## CLI Output (compact by default)
 

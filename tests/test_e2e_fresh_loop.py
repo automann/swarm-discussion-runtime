@@ -33,10 +33,7 @@ def run_cli(*args: str) -> dict:
 
 def test_full_runtime_loop_on_a_fresh_directory(tmp_path: Path) -> None:
     discussion = tmp_path / "fresh-loop"
-    discussion.mkdir()
-    (discussion / "manifest.json").write_text(
-        json.dumps({"schemaVersion": 1, "id": "fresh-loop", "mode": "lightweight", "status": "active"})
-    )
+    run_cli("init", "--dir", str(discussion), "--discussion-id", "fresh-loop", "--mode", "lightweight")
 
     run_cli("context-build", "--brief", str(BRIEF), "--out", str(discussion / "context" / "summary.md"))
 
@@ -136,17 +133,12 @@ def test_full_runtime_loop_on_a_fresh_directory(tmp_path: Path) -> None:
     assert [item["id"] for item in partial["messages"]] == ["r1-msg-001", "r1-msg-002"]
 
     final_state = dict(partial)
+    # Supply only topic/mode/synthesis; finalize-round derives metadata + timestamp.
     final_state.update(
         {
             "topic": "Fresh loop",
             "mode": "lightweight",
-            "timestamp": "2026-06-10T00:00:00Z",
             "synthesis": {"recommendation": "Runtime helpers drive the loop end to end."},
-            "metadata": {
-                "messageCount": 2,
-                "referenceCount": 0,
-                "participants": ["architect", "contrarian"],
-            },
         }
     )
     final_state_path = tmp_path / "final-state.json"
@@ -164,7 +156,7 @@ def test_full_runtime_loop_on_a_fresh_directory(tmp_path: Path) -> None:
     assert not (discussion / "rounds" / "001.json.partial").exists()
 
     artifacts_dir = discussion / "artifacts"
-    artifacts_dir.mkdir()
+    artifacts_dir.mkdir(exist_ok=True)
     (artifacts_dir / "synthesis.md").write_text("# Synthesis\n\nRuntime helpers drive the loop end to end.\n")
     manifest = json.loads((discussion / "manifest.json").read_text())
     manifest["status"] = "completed"

@@ -17,7 +17,7 @@ Repo discipline: every executed plan appends a `PROGRESS.md` round entry
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001 | Compact CLI output contract (orchestrator efficiency; fix prompt-build leak) | P2 | M | — | DONE (re-scoped P1→P2) |
-| 002 | finalize-round derives metadata + new `init` command (stop orchestrator JSON assembly) | P1 | M | — | TODO |
+| 002 | finalize-round derives metadata + new `init` command (stop orchestrator JSON assembly) | P1 | M | — | DONE |
 | 003 | Enforce JSON Schemas in tests (jsonschema dev-dep, conformance suite) | P2 | M | — | TODO |
 | 004 | Cost instrumentation (prompt char counts, artifact sizes, event span) | P1 | M | 001, 003 | TODO |
 | 005 | context-generator.md template (founding-doc deliverable) | P2 | S | — | TODO |

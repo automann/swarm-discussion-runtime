@@ -25,7 +25,7 @@ from swarm.prompt import build_prompt
 from swarm.smoke import adapter_smoke
 from swarm.transport import append_wait_batch, collect_transport_step, write_transport_step
 from swarm.validation import validate_discussion_dir, validate_round_file
-from swarm.wal import append_message, checkpoint, finalize_round, resume_plan
+from swarm.wal import append_message, checkpoint, finalize_round, init_discussion, resume_plan
 
 
 def emit(payload: dict[str, Any]) -> None:
@@ -224,6 +224,18 @@ def cmd_finalize_round(args: argparse.Namespace) -> int:
         "round": result.get("round"),
         "path": result.get("path"),
         "warnings": result.get("warnings", []),
+    }
+    emit_summary(result, summary, args.full)
+    return 0 if result["ok"] else 1
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    result = init_discussion(args.dir, args.discussion_id, mode=args.mode, title=args.title)
+    summary = {
+        "ok": result["ok"],
+        "manifestPath": result.get("manifestPath"),
+        "discussionId": result.get("discussionId"),
+        "nextHelperCommand": result.get("nextHelperCommand"),
     }
     emit_summary(result, summary, args.full)
     return 0 if result["ok"] else 1
@@ -449,6 +461,13 @@ def build_parser() -> argparse.ArgumentParser:
     resume = sub.add_parser("resume-plan", help="Describe how to resume from WAL state")
     resume.add_argument("--dir", type=Path, required=True, help="Discussion directory")
     resume.set_defaults(func=cmd_resume_plan)
+
+    init_p = sub.add_parser("init", help="Scaffold a discussion directory and manifest")
+    init_p.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    init_p.add_argument("--discussion-id", required=True, help="Discussion id")
+    init_p.add_argument("--mode", default="standard", help="Discussion mode")
+    init_p.add_argument("--title", help="Optional discussion title")
+    init_p.set_defaults(func=cmd_init)
 
     trace = sub.add_parser("trace", help="Build a diagnostic discussion artifact trace")
     trace.add_argument("--dir", type=Path, required=True, help="Discussion directory")

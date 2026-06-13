@@ -637,3 +637,27 @@ Use this shape for every future implementation round:
   re-vendor step: the adapter wrapper calls `runtime-contract` and reads the
   full `contract` — after re-vendoring this runtime it must call
   `runtime-contract --full`.
+
+## 2026-06-11 - Plan 002: finalize derives metadata + init command
+
+- Commit: this entry.
+- Roadmap alignment: plans/002. Removes parent JSON-assembly the architecture
+  forbids; adds the missing scaffold primitive.
+- Work summary: `finalize-round` now derives `metadata` (messageCount,
+  referenceCount, participants) and `timestamp` from the round when the caller
+  omits them, via `_derive_round_metadata`; caller-supplied values pass through
+  untouched so the validator still catches inconsistent input (no silent
+  repair). Added `init_discussion` + the `init` CLI command (scaffolds the
+  discussion dir + manifest, fails loud on re-init or bad id), added it to
+  `runtime-contract.json` (adapterFacing) and the adapter-facing list. The
+  fresh-loop e2e now uses `init` and supplies only topic/mode/synthesis to
+  finalize.
+- Verification: `.venv/bin/python -m pytest` 177 pass (172 + 5 new). init +
+  derivation smokes pass; runtime-contract still validates with `init`.
+- Failure coverage: tests pin derivation-when-absent, no-overwrite of supplied
+  metadata (metadata_mismatch), already_initialized, and invalid_discussion_id.
+- AgenTeam review: keeps validators strict (derivation happens before
+  validation, never repairs supplied data); init is a thin scaffold, not
+  orchestration.
+- Drift status: ON TRACK.
+- Next: plan 003 (enforce JSON schemas in tests).

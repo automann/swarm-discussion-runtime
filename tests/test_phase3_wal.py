@@ -397,3 +397,56 @@ def test_resume_plan_cli_reports_no_state(tmp_path: Path) -> None:
     assert payload["ok"] is True
     assert payload["source"] == "none"
     assert payload["nextAction"] == "start_round"
+
+
+def test_finalize_derives_metadata_and_timestamp_when_absent(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    messages = [{**message("architect", "Use formatter."), "id": "r1-msg-001"}]
+    state = valid_round_state(messages, {"recommendation": "Use formatter."})
+    del state["metadata"]
+    del state["timestamp"]
+
+    result = finalize_round(discussion, 1, state)
+
+    assert result["ok"] is True, result
+    final = read_json(discussion / "rounds" / "001.json")
+    assert final["metadata"] == {"messageCount": 1, "referenceCount": 0, "participants": ["architect"]}
+    assert final["timestamp"]
+
+
+def test_finalize_does_not_overwrite_supplied_metadata(tmp_path: Path) -> None:
+    discussion = tmp_path / "discussion"
+    messages = [{**message("architect", "Use formatter."), "id": "r1-msg-001"}]
+    state = valid_round_state(messages, {"recommendation": "x"})
+    state["metadata"]["messageCount"] = 99  # caller-supplied and wrong
+
+    result = finalize_round(discussion, 1, state)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "metadata_mismatch" for error in result["errors"])
+
+
+def test_init_discussion_creates_manifest_and_refuses_reinit(tmp_path: Path) -> None:
+    from swarm.wal import init_discussion
+
+    discussion = tmp_path / "d"
+    result = init_discussion(discussion, "demo-1", mode="lightweight")
+
+    assert result["ok"] is True, result
+    manifest = read_json(discussion / "manifest.json")
+    assert manifest["status"] == "active"
+    assert manifest["mode"] == "lightweight"
+    assert (discussion / "rounds").is_dir()
+
+    again = init_discussion(discussion, "demo-1")
+    assert again["ok"] is False
+    assert again["errors"][0]["code"] == "already_initialized"
+
+
+def test_init_discussion_rejects_bad_id(tmp_path: Path) -> None:
+    from swarm.wal import init_discussion
+
+    result = init_discussion(tmp_path / "d", "../escape")
+
+    assert result["ok"] is False
+    assert result["errors"][0]["code"] == "invalid_discussion_id"
