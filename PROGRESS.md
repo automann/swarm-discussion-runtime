@@ -752,3 +752,27 @@ Use this shape for every future implementation round:
   wrapper to call `runtime-contract --full`, simplify the orchestrator to use
   `init` + metadata derivation + compact output), re-certify, refresh the Codex
   handoff command-surface notes; then the thin aggregator.
+
+## 2026-06-11 - Re-vendor Claude Adapter At ecd447b
+
+- Commit: this entry.
+- Roadmap alignment: Phase 7 follow-on — delivers plans 001-006 to the Claude adapter.
+- Work summary: Re-vendored the runtime (bed47da -> ecd447b) into
+  swarm-discussion-claude; fixed the wrapper to call `runtime-contract --full`
+  (the compact-output coupling) and added `init` to its known commands;
+  simplified the swarm-orchestrator agent to use `init`, let `finalize-round`
+  derive metadata, and read merged results from `collect-result.json` under
+  compact output. Re-certified the host-native smoke against the re-vendored
+  runtime (all five gates). Refreshed `docs/CODEX-ADAPTER-HANDOFF.md` §8 to
+  state the current `main` HAS init/derivation/compact output and that an
+  adapter wrapper must call `runtime-contract --full`.
+- Verification: wrapper `doctor --smoke-fixture` PASS (vendored, nesting
+  supported, fixture on-track); `vendor verify` PASS; `certify_adapter.py`
+  CERTIFIED 5/5 against ecd447b.
+- Failure coverage: confirmed the coupling empirically — doctor broke pre-fix
+  on the compact `runtime-contract` and passed post-fix.
+- AgenTeam review: adapter stays a thin shell; runtime code unchanged this
+  round (handoff doc only).
+- Drift status: ON TRACK. The Claude adapter now pins the improved runtime.
+- Next: rebuild `swarm-discussion` as the thin aggregator pinning certified
+  adapter releases.

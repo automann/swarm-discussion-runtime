@@ -149,15 +149,19 @@ It must NOT:
 
 ## 8. Pitfalls learned building the Claude adapter (saves round-trips)
 
-- **Align to the EXACT vendored runtime SHA's command surface.** The Claude
-  adapter pinned `bed47da`, where: there is NO `init` command; `finalize-round`
-  does NOT derive metadata; there is NO compact `--full` flag. So with that SHA
-  you must: create `manifest.json` directly; supply `finalize-round` the full
-  `metadata` (`messageCount`, `referenceCount`, `participants`) + `timestamp`;
-  and do NOT pass `--full`. If you vendor a newer runtime where plans 001/002
-  have landed (compact output, `init`, metadata derivation), prefer those and
-  simplify — confirm against the `runtime-contract` of what you actually
-  vendored.
+- **Align to the EXACT vendored runtime SHA's command surface.** As of runtime
+  `ecd447b` (plans 001–006 landed), the current `main` HAS: an `init` command
+  (use it to scaffold the discussion + manifest); `finalize-round` that DERIVES
+  `metadata` + `timestamp` (supply only `roundId`/`topic`/`mode`/`messages`/
+  `argumentGraph`/`positionShifts`/`synthesis`); and COMPACT CLI output by
+  default (full payloads live in artifacts; pass `--full` for the whole object).
+  Consequences for your wrapper/orchestrator: your wrapper must call
+  `runtime-contract --full` (the compact form omits the `contract` object that
+  contract-validation reads — this bites on day one otherwise); the orchestrator
+  reads merged results from `collect-result.json`, not stdout. If you ever pin
+  an OLDER runtime (e.g. `bed47da`) it lacks all three — create the manifest by
+  hand, supply full metadata, and don't pass `--full`. Always confirm against
+  the `runtime-contract` of what you actually vendored.
 - **Mirror the vendored fixture shapes EXACTLY** — the runtime validates
   strictly: gapless ids `r{N}-msg-NNN`; one `argumentGraph` edge
   `{from,to,relation}` per message reference; relation ∈
