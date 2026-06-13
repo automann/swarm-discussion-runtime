@@ -587,3 +587,27 @@ Use this shape for every future implementation round:
   swarm-discussion as the thin aggregator. Optionally land runtime plans
   002/001 and re-vendor so the orchestrator can use init + metadata derivation
   + compact output.
+
+## 2026-06-11 - Auto-Push Cadence + Codex Adapter Handoff
+
+- Commit: this entry.
+- Roadmap alignment: Phase 7 — enabling the Codex adapter build and workflow.
+- Work summary: Validated the swarm-discussion-claude plugin-install path
+  (`claude plugin validate` passes; `--plugin-dir` registers both namespaced
+  agent types + the skill; the real `swarm-discussion:swarm-expert` spawns and
+  returns), and fixed the orchestrator to spawn the namespaced persona type
+  (committed in the adapter repo). Adopted an auto-push cadence (push committed
+  work to origin/main after each work turn without asking) and recorded it in
+  AGENTS.md here and in the adapter. Wrote `docs/CODEX-ADAPTER-HANDOFF.md`: a
+  self-contained build spec for Codex to build `swarm-discussion-codex`
+  (topology fork on `max_depth`, deliverables, Codex host specifics,
+  build+certify steps, entry contract, pitfalls).
+- Verification: `claude plugin validate` (pass); headless `--plugin-dir`
+  registration + real persona spawn (pass). Docs/workflow round otherwise.
+- Failure coverage: n/a (docs / workflow).
+- AgenTeam review: in scope; no runtime code changed. The handoff is
+  host-specific onboarding referencing the agnostic spec, not adapter code.
+- Drift status: ON TRACK. First adapter certified + install-validated; Codex
+  handoff ready.
+- Next: Codex builds `swarm-discussion-codex` from the handoff; then the thin
+  aggregator.
