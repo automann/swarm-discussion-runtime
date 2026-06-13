@@ -27,6 +27,13 @@ anymore; adapters and users depend on what ships from here.
     vendored CLI plus the bundled fixture must pass the gates with no access
     to this repo.
 
+## Push Cadence
+
+The maintainer has opted into auto-push: after any work turn that commits to
+this repo, push the new commits to `origin/main` without asking first. The same
+applies to the adapter repos (`swarm-discussion-claude`,
+`swarm-discussion-codex`).
+
 ## Boundaries
 
 - Do not add host-specific adapter code here: no skill text, spawn/wait
