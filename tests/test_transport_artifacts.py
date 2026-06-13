@@ -109,9 +109,9 @@ def test_transport_cli_roundtrip_writes_collect_result(tmp_path: Path) -> None:
     assert collect.returncode == 0, collect.stdout + collect.stderr
     payload = json.loads(collect.stdout)
     assert payload["ok"] is True
-    assert [item["persona"] for item in payload["result"]["results"]] == ["architect", "contrarian"]
+    assert payload["complete"] is True
     stored = json.loads((discussion_dir / "transport" / "r001" / "response" / "collect-result.json").read_text())
-    assert stored == payload["result"]
+    assert [item["persona"] for item in stored["results"]] == ["architect", "contrarian"]
 
 
 def test_transport_init_rejects_empty_spawn_order_without_writing_artifacts(tmp_path: Path) -> None:

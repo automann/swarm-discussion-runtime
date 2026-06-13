@@ -58,6 +58,7 @@ def test_adapter_smoke_cli_accepts_explicit_host_step_path() -> None:
         str(FIXTURE),
         "--host-step",
         "transport/r001/response/host-step.json",
+        "--full",
     )
 
     assert result.returncode == 0, result.stdout + result.stderr

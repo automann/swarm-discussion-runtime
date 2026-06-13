@@ -36,6 +36,16 @@ host logs.
 7. `append-message`, `checkpoint`, and `finalize-round` own WAL mutation.
 8. `trace` and `evidence` summarize health and portable audit data.
 
+## CLI Output (compact by default)
+
+Every runtime command prints a compact summary envelope to stdout (the keys an
+orchestrator needs: `ok`, ids, counts, health, paths). Full payloads are
+written to artifacts (`--out`/`--output` files, `prompt-build.json`,
+`collect-result.json`) and are also printed to stdout when `--full` is passed.
+On failure (`ok: false`) the full `errors` array is always printed regardless
+of `--full`. This keeps verbose JSON out of the orchestrator's context window;
+read the artifact (or use `--full`) when you need the complete object.
+
 ## Codex Recipe
 
 Codex-specific duties:

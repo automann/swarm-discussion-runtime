@@ -64,7 +64,7 @@ def test_full_runtime_loop_on_a_fresh_directory(tmp_path: Path) -> None:
         "--spawn-order",
         str(spawn_order_path),
     )
-    parent_context = init_result["hostStep"]["parentContext"]
+    parent_context = init_result["parentContext"]
     assert sorted(parent_context) == ["agentIds", "briefPath", "nextHelperCommand", "phase"]
 
     run_cli(
@@ -103,7 +103,7 @@ def test_full_runtime_loop_on_a_fresh_directory(tmp_path: Path) -> None:
         str(wait_result_path),
     )
     collect_result = run_cli("transport-collect", "--dir", str(discussion), "--round", "1", "--phase", "response")
-    assert collect_result["result"]["complete"] is True
+    assert collect_result["complete"] is True
 
     for sender, summary in (
         ("architect", "Runtime owns the loop."),

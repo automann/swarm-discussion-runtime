@@ -611,3 +611,29 @@ Use this shape for every future implementation round:
   handoff ready.
 - Next: Codex builds `swarm-discussion-codex` from the handoff; then the thin
   aggregator.
+
+## 2026-06-11 - Plan 001: Compact CLI Output Contract
+
+- Commit: this entry.
+- Roadmap alignment: plans/001. Reduces orchestrator/parent context burden from
+  verbose CLI stdout (the founding context-pollution complaint).
+- Work summary: Added `emit_summary` plus a `--full` flag to every
+  `swarm_rt.py` subcommand. Each command now prints a compact summary envelope
+  by default (`ok` + the keys an orchestrator needs + artifact paths); full
+  payloads stay in artifacts and behind `--full`; failures always print the
+  full `errors`. Fixed the prompt-build stdout leak (full prompt text no longer
+  printed). Updated CLI tests that read full-payload internals to use `--full`
+  or compact keys, added `tests/test_cli_output_contract.py`
+  (no-leak / size-caps / `--full`-escape / fail-loud), documented the contract
+  in ADAPTER-SPEC + HOST-ADAPTERS.
+- Verification: `.venv/bin/python -m pytest` 172 tests pass (167 + 5 new).
+  trace compact stdout ~195B, evidence ~545B.
+- Failure coverage: contract test pins fail-loud (full errors without `--full`)
+  and the no-leak invariant.
+- AgenTeam review: CLI-layer change only; library return values unchanged
+  (callers/tests still receive full dicts). Artifact-first discipline preserved.
+- Drift status: ON TRACK.
+- Next: plan 002 (finalize derives metadata + init command). NOTE for the
+  re-vendor step: the adapter wrapper calls `runtime-contract` and reads the
+  full `contract` — after re-vendoring this runtime it must call
+  `runtime-contract --full`.

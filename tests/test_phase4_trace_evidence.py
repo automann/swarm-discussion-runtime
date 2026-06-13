@@ -193,7 +193,7 @@ def test_trace_cli_suggests_resume_for_partial_round(tmp_path: Path) -> None:
         )
     )
 
-    result = run_cli("trace", "--dir", str(discussion))
+    result = run_cli("trace", "--dir", str(discussion), "--full")
 
     assert result.returncode == 0, result.stdout + result.stderr
     payload = json.loads(result.stdout)
@@ -224,7 +224,7 @@ def test_trace_cli_reports_validation_failure_next_action(tmp_path: Path) -> Non
     enrich_discussion_for_audit(discussion)
     (discussion / "context" / "summary.md").unlink()
 
-    result = run_cli("trace", "--dir", str(discussion))
+    result = run_cli("trace", "--dir", str(discussion), "--full")
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
@@ -280,7 +280,7 @@ def test_evidence_cli_writes_same_json_as_stdout(tmp_path: Path) -> None:
     enrich_discussion_for_audit(discussion)
     output = tmp_path / "reports" / "evidence.json"
 
-    result = run_cli("evidence", "--dir", str(discussion), "--output", str(output))
+    result = run_cli("evidence", "--dir", str(discussion), "--output", str(output), "--full")
 
     assert result.returncode == 0, result.stdout + result.stderr
     stdout_payload = json.loads(result.stdout)

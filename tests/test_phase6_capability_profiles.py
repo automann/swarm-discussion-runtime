@@ -57,7 +57,7 @@ def test_capability_doctor_cli_defaults_to_expert_basic() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
-    assert payload["profile"]["id"] == "expert-basic"
+    assert payload["effective"]["id"] == "expert-basic"
     assert payload["effective"]["allowedTools"] == []
     assert payload["effective"]["canCiteToolDerivedEvidence"] is False
 

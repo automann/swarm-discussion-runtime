@@ -71,7 +71,11 @@ evidence, not assumption.
    contract and runs the bundled minimal-v2 fixture through the gates, and
    pass-through delegation to runtime commands. The wrapper contains no
    discussion mechanics. Reference: the wrapper at `swarm-discussion`
-   HEAD `plugins/codex/runtime/swarm_runtime_wrapper.py` (~400 lines).
+   HEAD `plugins/codex/runtime/swarm_runtime_wrapper.py` (~400 lines). Runtime
+   commands print a compact summary to stdout by default and accept `--full`
+   for the complete payload; failures always print the full `errors`. Parse the
+   compact keys and pass `--full` only when you genuinely need the whole
+   artifact (which otherwise lives in the `--out`/`--output` file).
 3. **Skill / entry document** — thin. On a nesting-capable host it collects the
    brief, spawns ONE orchestrator sub-agent (see Execution topology), waits,
    and relays the returned synthesis; it does NOT run the protocol inline. It

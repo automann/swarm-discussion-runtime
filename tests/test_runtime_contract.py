@@ -37,7 +37,7 @@ def test_runtime_contract_manifest_is_valid() -> None:
 
 
 def test_runtime_contract_cli_emits_manifest_and_validation() -> None:
-    result = run_cli("runtime-contract")
+    result = run_cli("runtime-contract", "--full")
 
     assert result.returncode == 0, result.stdout + result.stderr
     payload = json.loads(result.stdout)
