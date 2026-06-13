@@ -516,3 +516,45 @@ Use this shape for every future implementation round:
 - Next: Scaffold `swarm-discussion-claude`, vendor the runtime at the current
   SHA, implement the thin wrapper and Claude skill per `docs/ADAPTER-SPEC.md`,
   and certify against a real Claude-driven discussion.
+
+## 2026-06-11 - Verified Sub-Agent Nesting; Nested-Orchestrator Topology
+
+- Commit: pending (verification + docs round; not yet committed).
+- Roadmap alignment: Phase 7 host-adapter split. A Claude Code capability that
+  changes the adapter's execution topology was verified before building the
+  first adapter, and the governing docs/plans were updated to match.
+- Work summary: Empirically verified that Claude Code 2.1.177 sub-agents can
+  spawn their own sub-agents (the old `agents.max_depth = 1` cap is gone).
+  Evidence: (a) a control sub-agent's tool set includes `Agent`; (b) a
+  root-spawned coordinator spawned two worker sub-agents whose unpredictable
+  tokens appeared only in their own separate transcripts (depth 2); (c) a
+  three-role chain reached depth 3, proven by child-before-parent completion
+  ordering in a shared log, correct returned data, distinct per-agent
+  transcripts, and orchestrator telemetry showing it did not do the work
+  itself. Depth >= 3 covers all realistic adapter needs; the documented
+  5-level ceiling was not pinned because the only instrument for it
+  (self-propagating chains) is correctly refused by capable agents — itself a
+  design constraint now recorded. Updated `docs/ADAPTER-SPEC.md` (new
+  Execution topology: parent -> orchestrator sub-agent -> personas -> optional
+  researcher; orchestrator + persona agent deliverables split; entry-contract
+  must-nots for no-self-replication and personas-must-not-nest; host nesting
+  capability gate + doctor probe), `docs/FUTURE-EXECUTORS.md` (verified-nesting
+  section; coordinator unblocked from root-thread constraint; depth-3 readonly
+  researcher now reachable), and re-scoped `plans/001` P1 -> P2 with a note in
+  `plans/README.md` (verbose stdout now pollutes a disposable orchestrator
+  context, not the user's main thread).
+- Verification: nesting proven via transcripts + ordered logs + correct data
+  (not agent self-report). `.venv/bin/python -m pytest` re-run after the
+  docs-only changes to confirm the suite is unaffected.
+- Failure coverage: not applicable (no runtime code changed). The probe's two
+  refusals of self-replicating prompts are captured as an adapter design rule.
+- AgenTeam review: stays within scope — this round verified a host capability
+  and updated specs/plans; it added no host-specific code, no packaging, and
+  no runtime semantics. The orchestrator-as-sub-agent topology is the cleanest
+  realization of the "parent agent is not the runtime" principle.
+- Drift status: ON TRACK. The verification strengthens the Phase 7 direction
+  rather than changing it; the runtime core is untouched.
+- Next: Scaffold `swarm-discussion-claude` (vendor at the current SHA, thin
+  spawn-the-orchestrator skill, swarm-orchestrator + swarm-expert agents,
+  doctor with a nesting probe) and certify it against a real Claude-driven
+  discussion.
