@@ -776,3 +776,27 @@ Use this shape for every future implementation round:
 - Drift status: ON TRACK. The Claude adapter now pins the improved runtime.
 - Next: rebuild `swarm-discussion` as the thin aggregator pinning certified
   adapter releases.
+
+## 2026-06-11 - Aggregator Rebuilt (swarm-discussion v0.2.0)
+
+- Commit: this entry.
+- Roadmap alignment: Phase 7 final structural deliverable — the thin aggregator.
+- Work summary: Preserved the v0.1 dual-host line (tag + branch `v0.1.x` at
+  5968f38) and rebuilt `swarm-discussion` `main` as a thin aggregator
+  marketplace: `.claude-plugin/marketplace.json` pins the certified Claude
+  adapter (`automann/swarm-discussion-claude` @ `v0.2.0`) via an external
+  github source; removed the bundled plugins/runtime/conformance (~11.4k lines);
+  new README/AGENTS/CI. Tagged the aggregator `v0.2.0` and the Claude adapter
+  `v0.2.0`. Updated the ACCEPTANCE adapter milestones (aggregator box checked;
+  Claude box refreshed to runtime `ecd447b`/`v0.2.0`).
+- Verification: `claude plugin validate .` on the aggregator passes; the CI
+  marketplace-validation check passes; the marketplace pins the adapter repo at
+  `v0.2.0`.
+- Failure coverage: aggregator CI validates the manifest shape and asserts no
+  plugin/runtime/conformance directories reappear on the aggregator.
+- AgenTeam review: aggregator is thin (marketplace + docs only); runtime code
+  unchanged this round. Distribution lives in the aggregator, per the topology.
+- Drift status: ON TRACK. Phase 7 is structurally complete; the only remaining
+  milestone is the Codex adapter (external, Codex-built).
+- Next: Codex builds `swarm-discussion-codex` from the handoff; add its
+  certified release to the aggregator marketplace when it lands.
