@@ -378,3 +378,24 @@ def test_evidence_raw_host_logs_present_requires_actual_files(tmp_path: Path) ->
 
     assert evidence["rawHostLogs"]["present"] is False
     assert evidence["rawHostLogs"]["paths"] == []
+
+
+def test_metrics_include_prompt_size_and_event_span(tmp_path: Path) -> None:
+    discussion = copy_complete_discussion(tmp_path)
+    enrich_discussion_for_audit(discussion)
+
+    evidence = build_evidence(discussion)
+    metrics = evidence["metrics"]
+
+    assert metrics["promptCharTotal"] > 0
+    assert metrics["promptCharMax"] > 0
+    assert metrics["artifactTotalBytes"] > 0
+    assert metrics["eventSpanSeconds"] is not None and metrics["eventSpanSeconds"] >= 0
+
+
+def test_metrics_survive_artifacts_without_char_counts() -> None:
+    evidence = build_evidence(ROOT / "fixtures" / "legacy" / "tauri-vs-electron-kanban")
+
+    assert evidence["ok"] is True
+    assert evidence["metrics"]["promptCharTotal"] == 0
+    assert evidence["metrics"]["artifactTotalBytes"] > 0

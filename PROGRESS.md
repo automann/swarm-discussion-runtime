@@ -681,3 +681,29 @@ Use this shape for every future implementation round:
 - Drift status: ON TRACK.
 - Next: plan 004 (cost instrumentation) — its schema additions will now be
   gated by this conformance suite.
+
+## 2026-06-11 - Plan 004: Cost Instrumentation
+
+- Commit: this entry.
+- Roadmap alignment: plans/004. Makes the founding "too slow / too many tokens"
+  complaint measurable on the runtime side.
+- Work summary: `build_prompt` now records `promptCharCount` +
+  `contextSummaryCharCount`; `_prompt_summary` aggregates promptCharTotal/Max/
+  Counted (skipping older artifacts that lack the field); `_events_summary`
+  computes firstTs/lastTs/spanSeconds from recorded event timestamps (guarded,
+  never raises); trace `artifacts` gains `totalBytes`; `_metrics` surfaces
+  promptCharTotal, promptCharMax, artifactTotalBytes, eventSpanSeconds. Schemas
+  document the new optional fields; minimal-v2 anchors regenerated. CHAR counts
+  only — token estimation stays a host concern.
+- Verification: `.venv/bin/python -m pytest` 194 pass (191 + 3 new). Live
+  prompt-build promptCharCount=1235; evidence metrics show artifactTotalBytes
+  and eventSpanSeconds; legacy fixture (no char counts) reports promptCharTotal
+  0 without crashing. Schema-conformance suite (plan 003) gates the additions.
+- Failure coverage: tests pin char-count recording, size+span metrics, and
+  graceful handling of artifacts lacking promptCharCount.
+- AgenTeam review: additive, deterministic sizes; durations derive from
+  recorded artifact timestamps, not wall-clock at trace time.
+- Drift status: ON TRACK.
+- Next: plan 005 (context-generator template). Deferred: the old-vs-new
+  cost/quality benchmark (post first real adapter discussion) is now unblocked
+  on the runtime side.

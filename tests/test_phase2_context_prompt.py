@@ -168,3 +168,11 @@ def test_prompt_build_rejects_boolean_visibility_budget() -> None:
 
     assert result["ok"] is False
     assert any(error["code"] == "invalid_visibility_budget" for error in result["errors"])
+
+
+def test_prompt_build_records_char_counts() -> None:
+    request = load_json(REQUESTS / "response.json")
+    result = build_prompt(request, base_dir=REQUESTS)
+    assert result["ok"] is True
+    assert result["promptCharCount"] == len(result["prompt"])
+    assert result["contextSummaryCharCount"] >= 0
