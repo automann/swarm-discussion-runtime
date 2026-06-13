@@ -661,3 +661,23 @@ Use this shape for every future implementation round:
   orchestration.
 - Drift status: ON TRACK.
 - Next: plan 003 (enforce JSON schemas in tests).
+
+## 2026-06-11 - Plan 003: Enforce JSON Schemas In Tests
+
+- Commit: this entry.
+- Roadmap alignment: plans/003. Closes the schema/validator drift channel.
+- Work summary: Added `jsonschema` as a test-only dev dependency and
+  `tests/test_schema_conformance.py`, validating runtime-contract.json,
+  profiles, the valid host-step fixtures, tool-evidence lines, the committed
+  minimal-v2 evidence anchor, and LIVE `build_evidence` / `build_prompt`
+  outputs against `schemas/`. No schema fixes were needed — current fixtures
+  and builders already conform.
+- Verification: `.venv/bin/python -m pytest` 191 pass (177 + 14 conformance).
+  Runtime stays stdlib-only (`grep -rn "import jsonschema" runtime/` is empty).
+- Failure coverage: the conformance suite IS the regression net; it will fail
+  loudly if a future builder output or fixture drifts from its schema.
+- AgenTeam review: keeps schemas as enforced contract, not dead weight; no
+  runtime dependency added.
+- Drift status: ON TRACK.
+- Next: plan 004 (cost instrumentation) — its schema additions will now be
+  gated by this conformance suite.
