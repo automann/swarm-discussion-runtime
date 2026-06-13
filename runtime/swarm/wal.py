@@ -9,9 +9,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from swarm._shared import MESSAGE_ID, fsync_dir as _fsync_dir
 from swarm.validation import ALLOWED_RELATIONS, validate_round_record
-
-MESSAGE_ID = re.compile(r"^r(\d+)-msg-(\d{3,})$")
 
 
 def _issue(code: str, path: str, message: str, value: Any = None) -> dict[str, Any]:
@@ -32,17 +31,6 @@ def _round_paths(discussion_dir: Path, round_id: int) -> dict[str, Path]:
         "progress": discussion_dir / "progress.md",
         "events": discussion_dir / "events.jsonl",
     }
-
-
-def _fsync_dir(path: Path) -> None:
-    try:
-        fd = os.open(path, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-    except OSError:
-        pass
 
 
 def _read_json(path: Path) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:

@@ -728,3 +728,27 @@ Use this shape for every future implementation round:
   context.py remains authoritative if the table ever drifts.
 - Drift status: ON TRACK.
 - Next: plan 006 (consolidate shared helpers) — runs last; touches most modules.
+
+## 2026-06-11 - Plan 006: Consolidate Shared Helpers (scoped)
+
+- Commit: this entry.
+- Roadmap alignment: plans/006 (P3 cleanup). Removes the duplication that
+  actually bit the hardening round.
+- Work summary: Added `runtime/swarm/_shared.py` and consolidated the
+  `MESSAGE_ID` grammar (previously duplicated in wal.py + validation.py and
+  changed in lockstep during hardening) and `fsync_dir` (wal.py + transport.py)
+  there; removed the now-unused `import re` in validation.py. Deferred the
+  `_issue` (11 identical copies) and `_load_json` (4 variants incl.
+  validation.py's distinct list-appending contract) consolidation: those carry
+  no format-drift hazard, are pure cosmetics, and the ~30-edit churn is not
+  worth the risk right now. Recorded as deferred in plans/README.
+- Verification: `.venv/bin/python -m pytest` 194 pass. Greps confirm
+  `MESSAGE_ID`/`fsync_dir` exist only in `_shared.py`.
+- Failure coverage: full suite is the regression net (behavior unchanged).
+- AgenTeam review: pure refactor, no behavior change; `_shared` is private and
+  never adapter-facing.
+- Drift status: ON TRACK. All six plans landed (006 scoped to the real hazard).
+- Next: re-vendor the improved runtime into swarm-discussion-claude (update the
+  wrapper to call `runtime-contract --full`, simplify the orchestrator to use
+  `init` + metadata derivation + compact output), re-certify, refresh the Codex
+  handoff command-surface notes; then the thin aggregator.

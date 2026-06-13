@@ -21,7 +21,7 @@ Repo discipline: every executed plan appends a `PROGRESS.md` round entry
 | 003 | Enforce JSON Schemas in tests (jsonschema dev-dep, conformance suite) | P2 | M | — | DONE |
 | 004 | Cost instrumentation (prompt char counts, artifact sizes, event span) | P1 | M | 001, 003 | DONE |
 | 005 | context-generator.md template (founding-doc deliverable) | P2 | S | — | DONE |
-| 006 | Consolidate duplicated private helpers into `swarm/_shared.py` | P3 | S/M | 001–004 (ordering) | TODO |
+| 006 | Consolidate duplicated private helpers into `swarm/_shared.py` | P3 | S/M | 001–004 (ordering) | DONE (MESSAGE_ID + fsync_dir; _issue/_load_json dedup deferred) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
