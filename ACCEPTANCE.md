@@ -64,7 +64,8 @@ claim holds only while all of the following stay true:
       built by Codex from the spec without cross-agent code review.
 - [x] `swarm-discussion` rebuilt as a thin aggregator that only accepts
       certified adapter releases (2026-06-11, `v0.2.0`; marketplace pins the
-      certified Claude adapter; v0.1 line preserved at the `v0.1.x` tag/branch).
+      certified Claude adapter; v0.1 line preserved at the `v0.1.16` tag and
+      `v0.1.x` branch).
 - The published plugin line keeps shipping until the first two boxes are
   checked.
 
