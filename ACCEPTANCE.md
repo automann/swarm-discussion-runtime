@@ -57,7 +57,9 @@ claim holds only while all of the following stay true:
 
 ## Adapter Milestones
 
-- [ ] `swarm-discussion-claude` certified on a real Claude-driven discussion.
+- [x] `swarm-discussion-claude` certified on a real Claude-driven discussion
+      (2026-06-11, runtime `bed47da`; nested orchestrator topology, all five
+      certify_adapter gates pass).
 - [ ] `swarm-discussion-codex` certified on a real Codex-driven discussion,
       built by Codex from the spec without cross-agent code review.
 - [ ] `swarm-discussion` rebuilt as a thin aggregator that only accepts

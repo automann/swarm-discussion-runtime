@@ -558,3 +558,32 @@ Use this shape for every future implementation round:
   spawn-the-orchestrator skill, swarm-orchestrator + swarm-expert agents,
   doctor with a nesting probe) and certify it against a real Claude-driven
   discussion.
+
+## 2026-06-11 - First Adapter Certified (swarm-discussion-claude)
+
+- Commit: this entry (the adapter itself lives in the swarm-discussion-claude repo).
+- Roadmap alignment: Phase 7 adapter milestone + ADAPTER-SPEC deliverable 6.
+- Work summary: Scaffolded the Claude adapter in a separate repo (thin
+  spawn-the-orchestrator skill, swarm-orchestrator agent that nests persona
+  sub-agents, swarm-expert persona, runtime-discovery wrapper with a host
+  nesting probe, runtime vendored at bed47da). Drove one real lightweight
+  discussion end to end through the nested orchestrator topology and certified
+  the produced artifact tree. Checked the swarm-discussion-claude box in the
+  ACCEPTANCE adapter-milestone list.
+- Verification: conformance/certify_adapter.py CERTIFIED=True against the
+  adapter's vendored bundle and a real discussion (all five gates:
+  runtime-contract, vendor-manifest, adapter-smoke, validate-loop,
+  validate-discussion). 20 runtime commands ok; depth-2 persona spawning
+  confirmed.
+- Failure coverage: certification runs the strict validators against a real
+  (non-fixture) discussion; the run surfaced and fixed one orchestrator bug
+  (manifest status must be set to completed for on-track / nextAction:none).
+- AgenTeam review: in scope — runtime core unchanged; adapter integration
+  validated through existing gates. The orchestrator-as-sub-agent topology
+  keeps mechanics out of the parent context (the founding goal).
+- Drift status: ON TRACK. First adapter certified; Codex adapter and the thin
+  aggregator remain.
+- Next: Codex adapter (built by Codex from ADAPTER-SPEC), then rebuild
+  swarm-discussion as the thin aggregator. Optionally land runtime plans
+  002/001 and re-vendor so the orchestrator can use init + metadata derivation
+  + compact output.
