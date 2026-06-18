@@ -58,8 +58,8 @@ claim holds only while all of the following stay true:
 ## Adapter Milestones
 
 - [x] `swarm-discussion-claude` certified on a real Claude-driven discussion
-      (re-certified 2026-06-11 against runtime `ecd447b`, released as `v0.2.0`;
-      nested orchestrator topology, all five certify_adapter gates pass).
+      (released `v0.2.1` vendoring runtime `93e99d1`; nested orchestrator
+      topology, all five certify_adapter gates pass).
 - [ ] `swarm-discussion-codex` certified on a real Codex-driven discussion,
       built by Codex from the spec without cross-agent code review.
 - [x] `swarm-discussion` rebuilt as a thin aggregator that only accepts
