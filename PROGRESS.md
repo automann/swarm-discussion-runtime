@@ -800,3 +800,36 @@ Use this shape for every future implementation round:
   milestone is the Codex adapter (external, Codex-built).
 - Next: Codex builds `swarm-discussion-codex` from the handoff; add its
   certified release to the aggregator marketplace when it lands.
+
+## 2026-06-19 - Codex-Found Runtime Fixes (artifact byte total + command drift)
+
+- Commit: this entry.
+- Roadmap alignment: Phase 7 hardening — two runtime bugs surfaced by Codex
+  during swarm-discussion-codex adapter development (see
+  `docs/codex-review-runtime-fix-handoff-20260619.md`).
+- Work summary:
+  - Issue 1 (artifact byte-total self-reference): `_artifact_paths` now excludes
+    the audit projections `artifacts/trace.json` + `artifacts/evidence.json`, so
+    `build_trace`/`build_evidence` are idempotent and `artifacts.totalBytes` is
+    stable (no longer depends on the size/prior existence of trace/evidence).
+    Regenerated the minimal-v2 anchors (trace/evidence/metrics now agree at
+    10562). `validate_minimal_loop` now compares the committed trace.json /
+    evidence.json stable fields (health, nextAction, artifactTotalBytes,
+    discussion, outcome) to a fresh rebuild and fails with
+    `stale_trace_artifact` / `stale_evidence_artifact` on divergence — closing
+    the gap where inconsistent anchors passed the gate.
+  - Issue 2 (command-surface drift): removed `persona-plan` from
+    `planned_commands()` (persona generation is an LLM/orchestrator concern,
+    intentionally not a runtime command); ARCHITECTURE updated. Added a drift
+    test pinning `planned_commands()` == CLI parser choices and contract
+    commands subset of planned.
+- Verification: `.venv/bin/python -m pytest` 198 pass (194 + 4 new);
+  `runtime-contract --full` / `adapter-smoke` / `validate-loop` all ok; tamper
+  tests confirm stale anchors are now caught.
+- Failure coverage: 3 issue-1 regression tests (byte-total consistency + stale
+  trace/evidence detection) + 1 command-drift test; all fail pre-fix.
+- AgenTeam review: runtime-only source-of-truth fixes; no adapter files touched
+  (per handoff boundary). Validators now fail loud on the previously-silent
+  inconsistency.
+- Drift status: ON TRACK.
+- Next: re-vendor into swarm-discussion-codex; Codex continues the adapter.

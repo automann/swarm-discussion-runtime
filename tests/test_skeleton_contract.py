@@ -105,3 +105,21 @@ def test_governance_docs_reflect_source_of_truth_role() -> None:
     non_goals = (ROOT / "NON_GOALS.md").read_text()
     assert "Not A Host Adapter" in non_goals
     assert "Not The Distribution Repo" in non_goals
+
+
+def test_planned_commands_match_cli_parser_and_cover_contract() -> None:
+    import argparse
+    import json as _json
+
+    import swarm_rt
+
+    parser = swarm_rt.build_parser()
+    sub = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
+    parser_commands = set(sub.choices)
+    planned = set(swarm.planned_commands())
+    assert planned == parser_commands, {
+        "in_planned_not_parser": sorted(planned - parser_commands),
+        "in_parser_not_planned": sorted(parser_commands - planned),
+    }
+    contract = _json.loads((ROOT / "runtime-contract.json").read_text())
+    assert set(contract["commands"]) <= planned, sorted(set(contract["commands"]) - planned)

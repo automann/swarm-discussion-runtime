@@ -131,3 +131,38 @@ def test_validate_loop_rejects_schema_incomplete_evidence_artifact(tmp_path: Pat
 
     assert result["ok"] is False
     assert any(error["code"] == "incomplete_evidence_artifact" for error in result["errors"])
+
+
+def test_minimal_v2_artifact_byte_total_is_stable_and_consistent() -> None:
+    # trace.json / evidence.json must agree on the (self-reference-free) byte total,
+    # and a fresh rebuild must reproduce it (idempotent — no audit-projection self-count).
+    stored_trace = json.loads((FIXTURE / "artifacts" / "trace.json").read_text())["artifacts"]["totalBytes"]
+    evidence = json.loads((FIXTURE / "artifacts" / "evidence.json").read_text())
+    assert stored_trace == evidence["artifacts"]["totalBytes"] == evidence["metrics"]["artifactTotalBytes"]
+    assert build_trace(FIXTURE)["artifacts"]["totalBytes"] == stored_trace
+    paths = build_trace(FIXTURE)["artifacts"]["paths"]
+    assert not any(p.endswith("artifacts/trace.json") or p.endswith("artifacts/evidence.json") for p in paths)
+
+
+def test_validate_loop_detects_stale_trace_artifact(tmp_path: Path) -> None:
+    fixture = copy_fixture(tmp_path)
+    trace = json.loads((fixture / "artifacts" / "trace.json").read_text())
+    trace["artifacts"]["totalBytes"] = 999999
+    (fixture / "artifacts" / "trace.json").write_text(json.dumps(trace))
+
+    result = validate_minimal_loop(fixture)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "stale_trace_artifact" for error in result["errors"])
+
+
+def test_validate_loop_detects_stale_evidence_artifact(tmp_path: Path) -> None:
+    fixture = copy_fixture(tmp_path)
+    evidence = json.loads((fixture / "artifacts" / "evidence.json").read_text())
+    evidence["metrics"]["artifactTotalBytes"] = 123
+    (fixture / "artifacts" / "evidence.json").write_text(json.dumps(evidence))
+
+    result = validate_minimal_loop(fixture)
+
+    assert result["ok"] is False
+    assert any(error["code"] == "stale_evidence_artifact" for error in result["errors"])

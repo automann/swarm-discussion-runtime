@@ -89,7 +89,6 @@ swarm-rt planned-commands
 swarm-rt runtime-contract
 swarm-rt init
 swarm-rt context-build
-swarm-rt persona-plan
 swarm-rt prompt-build
 swarm-rt collect-merge
 swarm-rt transport-init
@@ -109,9 +108,10 @@ swarm-rt trace
 swarm-rt evidence
 ```
 
-Commands are added behind tests and fixtures. `init` and `persona-plan` remain
-planned until their runtime contracts are proven; everything else above is
-implemented.
+Every command above is implemented and matches `planned_commands()` and the CLI
+parser (a drift test pins them together). Persona generation requires LLM
+judgment, so it stays a host/orchestrator concern and is intentionally NOT a
+runtime command.
 
 ## Artifact Shape
 
