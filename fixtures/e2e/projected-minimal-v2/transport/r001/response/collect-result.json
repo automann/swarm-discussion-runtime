@@ -1,0 +1,50 @@
+{
+  "complete": true,
+  "errors": [],
+  "missingAgentIds": [],
+  "missingPersonas": [],
+  "ok": true,
+  "receivedAgentIds": [
+    "agent-architect",
+    "agent-contrarian"
+  ],
+  "requiredAgentIds": [
+    "agent-architect",
+    "agent-contrarian"
+  ],
+  "results": [
+    {
+      "agentDescriptor": {
+        "agentType": "swarm-projmin1-architect",
+        "invocationForm": "explicit_spawn",
+        "projectedName": "swarm-projmin1-architect",
+        "projectedPath": ".codex/agents/swarm-projmin1-architect.toml",
+        "projectedSha256": "6ad78edaa350e2def000d2f950cd39d3b00ae66f11c3b15c5b591d77f12d0bca",
+        "promptRef": "prompts/r001/response/architect/prompt.txt"
+      },
+      "agentId": "agent-architect",
+      "persona": "architect",
+      "result": {
+        "claim": "Keep the host thin and validate the discussion through local artifacts.",
+        "name": "architect"
+      }
+    },
+    {
+      "agentDescriptor": {
+        "agentType": "swarm-projmin1-contrarian",
+        "invocationForm": "explicit_spawn",
+        "projectedName": "swarm-projmin1-contrarian",
+        "projectedPath": ".codex/agents/swarm-projmin1-contrarian.toml",
+        "projectedSha256": "d0f4e07b2054ed2ae5bdfe47dcb516cf41bf55f0adf35a1a162e4b67ace22f16",
+        "promptRef": "prompts/r001/response/contrarian/prompt.txt"
+      },
+      "agentId": "agent-contrarian",
+      "persona": "contrarian",
+      "result": {
+        "claim": "A complete loop must validate host-step and capability evidence, not only final rounds.",
+        "name": "contrarian"
+      }
+    }
+  ],
+  "timedOut": false
+}

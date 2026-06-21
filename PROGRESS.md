@@ -892,3 +892,44 @@ Use this shape for every future implementation round:
   in 007 is actually auditable; still additive (no-descriptor path unchanged).
 - Drift status: ON TRACK.
 - Next: plan 008 (projection-required certification + projected fixture + topology docs).
+
+## 2026-06-21 - Plan 008: projected fan-out certification (v0.3.0)
+
+- Commit: this entry.
+- Roadmap alignment: v0.3.0 dynamic custom-agent topology (ADR 0001 D4); plan 008.
+- Work summary:
+  - New `runtime/swarm/projection.py` `validate_projection(dir, require_projection)`:
+    opt-in gate (fires only when a phase declares
+    `customAgentProjection.projected==true`) enforcing per-result descriptor
+    linkage (projectedName/sha/promptRef), `customAgentProjection` count>=1 +
+    agentSourceDir, and the `projection-manifest.json` (present, schema-shape,
+    run-scoped names embedding manifest runId, descriptor paths in createdPaths).
+  - Wired into `validate_minimal_loop` (so both `validate-loop` and `adapter-smoke`
+    enforce it); `validate-loop --require-projection` + `certify_adapter
+    --require-projection` add the release-mode "projection must be declared"
+    assertion (closes the opt-in-gate loophole; rejects the old spawn path).
+  - New fixture `fixtures/e2e/projected-minimal-v2` (run-scoped descriptors,
+    customAgentProjection, collect-result descriptors, projection-manifest.json
+    deletionStatus=clean) certifies under `--require-projection`.
+  - Docs: ADAPTER-SPEC "Dynamic custom-agent provenance" now states enforcement +
+    the host-side gates (host truth + zero-residue); HOST-ADAPTERS per-host
+    projection recipe; RUNTIME-PACKAGE-BOUNDARY ownership bullets.
+  - Optional metric (ADR open question): DECIDED NO — projection auditability is
+    covered by validate_projection's summary (projectedPhases/projectedAgents) and
+    the projection-manifest artifact; a duplicate evidence metric would add fixture
+    churn for marginal value.
+- Verification: `.venv/bin/python -m pytest -q` -> 225 passed (was 214; +11 in
+  tests/test_projection.py). certify projected --require-projection CERTIFIED;
+  certify minimal-v2 --require-projection NOT certified (projection_required);
+  certify minimal-v2 no-flag CERTIFIED (back-compat). planned==parser holds (no
+  new command; --require-projection is a flag on validate-loop).
+- Failure coverage: missing/dropped descriptor, invalid sha, unresolved promptRef,
+  missing manifest, non-run-scoped name, manifest mismatch, count<1,
+  projection_required (old path under require).
+- AgenTeam review: gate is opt-in so v0.2.x discussions are unaffected; runtime
+  validates shape + naming only (host truth + actual deletion remain adapter-side,
+  ADR Q4). Closes the Codex adversarial-review opt-in-gate finding at the runtime.
+- Drift status: ON TRACK. Runtime side of v0.3.0 (plans 007 + 008) is complete.
+- Next: cut a runtime vendoring commit; adapters (swarm-discussion-claude per
+  plan 001; swarm-discussion-codex per its PRD) re-vendor, build the topology,
+  retain a real projected smoke, and certify with --require-projection.

@@ -139,11 +139,13 @@ adapter release.
 
 ## Dynamic custom-agent provenance (v0.3.0, additive)
 
-As of runtime plan 007 the transport artifacts carry OPTIONAL, host-agnostic
-provenance for dynamically-projected custom expert agents. These fields are
-additive (`schemaVersion` stays `1`) and **not yet certification-required** — an
-old-path adapter remains valid until the enforcement in plan 008 / ADR 0001 D4
-lands. When an adapter projects per-topic custom agents it SHOULD emit:
+The transport artifacts carry host-agnostic provenance for dynamically-projected
+custom expert agents. These fields are additive (`schemaVersion` stays `1`): an
+old-path (non-projected) adapter remains valid. But when an adapter DOES project
+per-topic custom agents the runtime **enforces** consistency — the checks below
+fire automatically (opt-in: only when a phase declares projection), and a v0.3.0
+release certifies with the projection-required mode (below). A projecting adapter
+MUST emit:
 
 - **`agentDescriptor`** on each `spawn-order.json` entry, echoed on each
   `collect-result.json` result (`schemas/spawn-order.schema.json`,
@@ -162,12 +164,29 @@ lands. When an adapter projects per-topic custom agents it SHOULD emit:
 - CLI: `transport-init --agent-source-dir <dir>` records the projection source
   directory (e.g. `.claude/agents` / `.codex/agents`).
 
-NOT yet in this spec (lands with plan 008): the full
-`parent → coordinator → projected-expert` topology recipe, projection-required
-certification (`certify_adapter --require-projection`), the cleanup zero-residue
-release gate, and the per-host `HOST-ADAPTERS.md` / `runtime-contract.json`
-updates. Do not treat projected provenance as certified product truth until then
-(ADR 0001 D4: probe-only until projection-required certification passes).
+**Projection-required certification (v0.3.0 release mode, ADR 0001 D4).** A
+v0.3.0 adapter release MUST certify a *projected* discussion:
+
+```bash
+python3 conformance/certify_adapter.py --require-projection \
+  --discussion <real projected discussion> --vendored <…> --runtime <…>
+# equivalently for the loop gate alone: swarm-rt validate-loop <dir> --require-projection
+```
+
+`--require-projection` fails unless the discussion declares projection, every
+result carries a descriptor, and the projection manifest is present and
+consistent — so an adapter cannot certify the old spawn path while its docs claim
+the projected topology. Without the flag, certification is unchanged (v0.2.x
+back-compat).
+
+**What the runtime CANNOT prove (host-side gates).** The runtime validates
+descriptor/manifest *shape*, run-scoped naming, and replay consistency, but it
+cannot see the host agent directory or threads. So (a) that the host actually
+invoked the named custom agent is proven only by the retained real-host smoke,
+and (b) that the projected files were actually deleted is the adapter's
+**zero-residue release gate** (`find` for run-scoped leftovers across success /
+failure / timeout; manifest `deletionStatus == "clean"`). The per-host projection
+recipe lives in `docs/HOST-ADAPTERS.md`.
 
 ## Versioning
 

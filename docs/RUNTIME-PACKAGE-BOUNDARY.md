@@ -39,6 +39,10 @@ Host adapter owns:
   with host-produced ids and wait batches.
 - Calling runtime gates such as `validate-host-step`, `adapter-smoke`, and
   `validate-loop`.
+- (v0.3.0) Projecting per-topic custom-agent files, writing
+  `projection-manifest.json`, and cleaning those files up (zero-residue) — the
+  runtime cannot see the host agent directory, so actual deletion is the
+  adapter's release gate.
 
 Host adapter must not construct prompts, demux wait results, mint message IDs,
 mutate WAL state, or decide audit health.
@@ -50,6 +54,9 @@ Runtime owns:
 - WAL mutation, checkpointing, and finalization.
 - Directory, round, capability, trace, evidence, adapter smoke, and loop
   validation.
+- (v0.3.0) Projected custom-agent provenance: preserving `agentDescriptor`,
+  and validating `customAgentProjection` + the projection-manifest shape and
+  run-scoped naming (`validate-loop [--require-projection]`).
 
 Runtime must not spawn host agents, wait on host agents, own parent conversation
 orchestration, install plugins, or manage marketplaces.

@@ -149,6 +149,53 @@ the recorded spawn order and wait batches, compares the replay with the stored
 collect result, then summarizes trace, evidence, capability, and loop status. It
 does not spawn agents and does not mutate discussion state.
 
+## Dynamic custom-agent projection (v0.3.0)
+
+In v0.3.0 the parent projects per-topic custom expert agents, a coordinator
+(background session on Claude, dedicated thread on Codex) drives the runtime loop
+and spawns those projected experts, and the parent tears them down. The runtime
+owns the provenance; see `docs/ADAPTER-SPEC.md` "Dynamic custom-agent provenance"
+and ADR 0001.
+
+Per-host projection lifecycle:
+
+- **Claude**: parent writes `.claude/agents/swarm-<runId>-<role>.md`, dispatches
+  the coordinator with `claude --bg --agent swarm-discussion:swarm-coordinator`,
+  then deletes those files. `resultKey` is `name`.
+- **Codex**: parent writes `.codex/agents/swarm-<runId>-<role>.toml`, creates one
+  dedicated coordinator thread, then deletes those files. `resultKey` is
+  `agent_id`.
+
+Coordinator runtime additions to the shared flow:
+
+1. `transport-init --agent-source-dir <.claude/agents|.codex/agents>` with a
+   spawn-order whose entries carry `agentDescriptor` (`projectedName` run-scoped —
+   it MUST embed `<runId>`; `projectedPath`, `projectedSha256`, `agentType`,
+   `invocationForm: explicit_spawn`, `promptRef`). This records
+   `transport.customAgentProjection` on `host-step.json`.
+2. Spawn each projected expert by its exact custom-agent name (explicit spawn —
+   capture the host id; `@mention` only when it still yields a collect id).
+3. `transport-append-batch` / `transport-collect` as usual; the descriptor flows
+   onto each `collect-result.json` result.
+4. The parent writes `projection-manifest.json` (`runId`,
+   `createdPaths[{path, sha256}]`, `deletionStatus`, `removedPaths`,
+   `remainingPaths`) and updates `deletionStatus` to a terminal value on every
+   exit path.
+
+Gates (the runtime enforces these only when projection is declared):
+
+```bash
+swarm-rt validate-loop .swarm/discussions/<id> --require-projection
+python3 conformance/certify_adapter.py --require-projection --discussion <dir> --vendored <…> --runtime <…>
+```
+
+`--require-projection` is the v0.3.0 release mode (ADR 0001 D4): it rejects a
+discussion that does not declare projection, so the old spawn path cannot be
+certified while claiming the projected topology. The runtime validates
+descriptor/manifest shape and run-scoped naming; it cannot see the host agent
+directory, so the adapter must additionally prove **zero residue** (no run-scoped
+projected file survives after success, failure, or timeout).
+
 ## Acceptance Check
 
 The Phase 5 acceptance proof is this invariant:

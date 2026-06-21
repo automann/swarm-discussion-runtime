@@ -44,7 +44,7 @@ def _run_json(command: list[str]) -> tuple[dict, int]:
     return payload, completed.returncode
 
 
-def certify(discussion: Path, runtime: Path, vendored: Path | None) -> dict:
+def certify(discussion: Path, runtime: Path, vendored: Path | None, require_projection: bool = False) -> dict:
     checks: list[dict] = []
 
     def record(name: str, payload: dict, returncode: int) -> bool:
@@ -76,7 +76,10 @@ def certify(discussion: Path, runtime: Path, vendored: Path | None) -> dict:
     smoke, code = _run_json([sys.executable, str(runtime), "adapter-smoke", "--dir", str(discussion)])
     record("adapter-smoke", smoke, code)
 
-    loop, code = _run_json([sys.executable, str(runtime), "validate-loop", str(discussion)])
+    loop_command = [sys.executable, str(runtime), "validate-loop", str(discussion)]
+    if require_projection:
+        loop_command.append("--require-projection")
+    loop, code = _run_json(loop_command)
     record("validate-loop", loop, code)
 
     validation, code = _run_json([sys.executable, str(runtime), "validate-discussion", str(discussion)])
@@ -88,6 +91,7 @@ def certify(discussion: Path, runtime: Path, vendored: Path | None) -> dict:
         "certified": certified,
         "discussionDir": str(discussion),
         "runtime": str(runtime),
+        "requireProjection": require_projection,
         "checks": checks,
     }
 
@@ -97,8 +101,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--discussion", type=Path, required=True)
     parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
     parser.add_argument("--vendored", type=Path)
+    parser.add_argument(
+        "--require-projection",
+        action="store_true",
+        help="v0.3.0 release mode: require a projected discussion with consistent provenance (ADR 0001 D4)",
+    )
     args = parser.parse_args(argv)
-    result = certify(args.discussion, args.runtime, args.vendored)
+    result = certify(args.discussion, args.runtime, args.vendored, require_projection=args.require_projection)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["ok"] else 1
 
