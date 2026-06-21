@@ -22,7 +22,7 @@
 
 ## Why this matters
 
-The founding document (`original-intent-of-why-to-rewrite.md`) proposed: "the
+The founding intent (see the README "Thesis" section) proposed: "the
 plugin internally maintains a context-generator.md (placed in the same
 directory as persona-generator.md). When the parent agent calls the
 swarm-discussion skill, the parent agent generates a context-summary.md based

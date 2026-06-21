@@ -24,7 +24,7 @@
 
 ## Why this matters
 
-The founding problem statement (`original-intent-of-why-to-rewrite.md`)
+The founding problem statement (see the README "Thesis" section)
 complains that "even lightweight discussions require longer times and more
 token overhead". The repo has ZERO instrumentation for this: no prompt sizes,
 no artifact sizes, no durations. `ACCEPTANCE.md` even lists the falsifier

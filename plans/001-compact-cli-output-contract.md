@@ -36,8 +36,8 @@ last cheap moment to change stdout shapes before an adapter depends on them.
 ## Why this matters
 
 This runtime exists to keep discussion mechanics OUT of the parent LLM
-orchestrator's context window (see `original-intent-of-why-to-rewrite.md` and
-README "Thesis"). But every CLI command prints its full JSON result to stdout,
+orchestrator's context window (see the README "Thesis" section). But every CLI
+command prints its full JSON result to stdout,
 and the orchestrator pays context tokens for every byte. Worst case:
 `prompt-build` prints the ENTIRE generated expert prompt to stdout (measured
 2,606 bytes on the small phase2 fixture) even when `--out-dir` already wrote
