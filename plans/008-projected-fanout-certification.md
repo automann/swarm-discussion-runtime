@@ -44,29 +44,52 @@ non-projected fixtures/discussions stay green.
      `projectedSha256` matching `^[0-9a-f]{64}$`, and a `promptRef` that resolves
      to an existing file under the discussion dir. Emit precise codes:
      `missing_agent_descriptor`, `invalid_projected_sha`, `unresolved_prompt_ref`.
+   - **Projection manifest + run-scoped names** (ADR 0001 D4/Q4): when projection
+     is declared, require a schema-valid `projection-manifest.json` in the
+     discussion dir; every descriptor's `projectedName` must appear in the
+     manifest's `createdPaths` **and** be run-scoped (embed the manifest `runId`);
+     `deletionStatus` must be present. Codes: `missing_projection_manifest`,
+     `projection_manifest_mismatch`, `non_run_scoped_agent_name`. The runtime
+     validates manifest *shape* + naming only — it cannot verify host filesystem
+     deletion; that is the adapter's zero-residue release gate (the split is
+     intentional, ADR Q4).
    - Non-projected discussions: gate is inert (no behavior change).
 
 2. **Projected fixture.** Add `fixtures/e2e/projected-minimal-v2/` (copy
    `minimal-v2` and add projection): spawn-order entries with valid
-   `agentDescriptor`s, host-step `customAgentProjection {projected:true,...}`,
-   `collect-result` results carrying descriptors, prompt artifacts at the
-   referenced `promptRef`s, regenerated `trace.json`/`evidence.json`. It must
-   pass `adapter-smoke`, `validate-loop`, and `validate-discussion`. Keep
-   `minimal-v2` as the non-projected baseline (do not modify it).
+   `agentDescriptor`s (run-scoped `projectedName`s), host-step
+   `customAgentProjection {projected:true,...}`, `collect-result` results carrying
+   descriptors, a `projection-manifest.json` (matching `runId`, `createdPaths` with
+   sha256, `deletionStatus: "clean"`), prompt artifacts at the referenced
+   `promptRef`s, regenerated `trace.json`/`evidence.json`. It must pass
+   `adapter-smoke`, `validate-loop`, `validate-discussion`, and
+   `certify_adapter.py --require-projection`. Keep `minimal-v2` as the
+   non-projected baseline (do not modify it).
 
-3. **Certification.** Confirm `conformance/certify_adapter.py` needs no new flags
-   — the gate rides inside `validate-host-step`/`validate-loop`/`validate-discussion`,
-   so `certify_adapter.py --discussion fixtures/e2e/projected-minimal-v2 …` exercises
-   it. If certify has an explicit check list, add a `projected-fan-out` check that
-   asserts the discussion's host-step declares projection and the linkage holds
-   (so an operator can certify *as a projected discussion* explicitly).
+3. **Certification + projection-required mode (ADR 0001 D4).** The gate rides
+   inside `validate-host-step`/`validate-loop`/`validate-discussion`, so a plain
+   `certify_adapter.py --discussion fixtures/e2e/projected-minimal-v2 …` exercises
+   it. Additionally add a **`--require-projection`** flag: certification FAILS
+   unless the discussion declares `customAgentProjection.projected == true`, every
+   result carries a descriptor, and the projection manifest is present + consistent.
+   This is the v0.3.0 release mode — it stops an adapter certifying the *old* spawn
+   path while its docs claim the projected topology. Without the flag, behavior is
+   unchanged (v0.2.x back-compat). Note: the adapter's host-side zero-residue
+   cleanup check is a *separate adapter release gate* (the runtime can't see the
+   host agent dir); cross-reference it in the docs but do not fake it in the runtime.
 
-4. **Negative tests** (the Codex P1, pinned):
+4. **Negative tests** (the Codex P1 + the adversarial-review findings, pinned):
    - A projected host-step whose `collect-result` lacks descriptors →
      `validate-loop` fails with `missing_agent_descriptor` (would have passed before).
    - A descriptor with a bad sha / unresolved `promptRef` → the matching code.
-   - The non-projected `minimal-v2` → still `ok` (gate inert).
-   - schema conformance for the projected fixture (plan 003 pattern).
+   - The non-projected `minimal-v2` → still `ok` under plain validation (gate inert)…
+   - …but the non-projected `minimal-v2` under **`--require-projection`** →
+     certification FAILS (proves the old spawn path cannot satisfy a v0.3.0 release;
+     closes the opt-in loophole, ADR D4).
+   - A projected fixture missing `projection-manifest.json` → `missing_projection_manifest`.
+   - A `projectedName` that does not embed the manifest `runId` →
+     `non_run_scoped_agent_name` (cross-run-contamination guard, ADR R3).
+   - schema conformance for the projected fixture + manifest (plan 003 pattern).
 
 5. **Optional metric (ADR open question).** If cheap, surface
    `metrics.projectedAgentCount` in `evidence` (and a `customAgentProjection`
@@ -99,6 +122,8 @@ non-projected fixtures/discussions stay green.
    - `python3 runtime/swarm_rt.py validate-loop fixtures/e2e/projected-minimal-v2` → `ok: true`.
    - `python3 runtime/swarm_rt.py validate-loop fixtures/e2e/minimal-v2` → `ok: true` (gate inert).
    - `python3 conformance/certify_adapter.py --discussion fixtures/e2e/projected-minimal-v2 --vendored . --runtime runtime/swarm_rt.py` (or the standard invocation) → CERTIFIED.
+   - `python3 conformance/certify_adapter.py --discussion fixtures/e2e/projected-minimal-v2 --require-projection …` → CERTIFIED.
+   - `python3 conformance/certify_adapter.py --discussion fixtures/e2e/minimal-v2 --require-projection …` → FAILS (old path can't satisfy a v0.3.0 release; ADR D4).
 
 ## STOP conditions
 

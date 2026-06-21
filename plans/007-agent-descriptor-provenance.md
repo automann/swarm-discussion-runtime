@@ -143,6 +143,14 @@ editing; it is the CLI seam where the descriptor enters).
    - Add `schemas/collect-result.schema.json` describing `collect_merge` output
      including the optional per-result `agentDescriptor`. (If a partial schema
      already exists, extend it instead.)
+   - Add `schemas/projection-manifest.schema.json` (runtime-owned shape, written
+     by the adapter, validated by the runtime — ADR 0001 D4/Q4):
+     `{runId (req str), createdPaths: [{path, sha256}], deletionStatus:
+     enum[pending|clean|partial|skipped|failed], removedPaths[], remainingPaths[]}`.
+     Run-scoped-name *enforcement* (every `projectedName` embeds `runId`) and the
+     manifest↔descriptor cross-check land in **plan 008's** gate, which has the
+     manifest's `runId` available; 007 only defines the schema and keeps the
+     descriptor preserved end-to-end.
 
 6. **Tests** (`tests/`), following plan 003's jsonschema conformance pattern:
    - `transport.py`: spawn-order entries with a valid `agentDescriptor` survive
