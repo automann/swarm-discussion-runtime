@@ -22,21 +22,28 @@ primitives and call runtime commands.
 
 ## Current Status
 
-Phases 0-6 are complete and hardened: fan-in merge, artifact validation,
-context summary, prompt-build, WAL helpers, trace/evidence with capability
-summaries, thin host-step validation, capability profiles, transport artifact
-helpers, and the machine-readable runtime contract — all behind 160+ tests,
-anchored by the minimal-v2 fixture and real legacy discussion fixtures. The
-original proof pipeline is pinned end-to-end on a fresh directory:
+The runtime is complete and the host-adapter split has shipped. Core mechanics —
+fan-in merge, artifact validation, context summary, prompt-build, WAL helpers,
+trace/evidence with capability summaries, host-step validation, capability
+profiles, transport helpers, and the machine-readable runtime contract — are
+hardened behind 200+ tests, anchored by the minimal-v2 fixture and real legacy
+discussions. The proof pipeline is pinned end-to-end on a fresh directory:
 
 ```text
 brief -> prompt-build -> collect-merge -> WAL -> validate -> trace/evidence
 ```
 
-Phase 7 (host adapter split) is in progress: the protocol package, legacy
-fixtures, vendoring tooling, and certification kit have landed. Next are the
-per-host adapter repos (`swarm-discussion-claude` first), then the published
-`swarm-discussion` repo thins into an aggregator of certified releases.
+**v0.3.0 — dynamic custom-agent topology.** Both host adapters are built and
+certified on the shared topology: the parent projects per-topic custom expert
+agents, a coordinator (background session on Claude, dedicated thread on Codex)
+runs the runtime loop and spawns them, and the runtime owns the projection
+provenance — a host-agnostic `agentDescriptor` plus a projection manifest,
+enforced by `certify_adapter.py --require-projection`. See
+`docs/adr/0001-v0.3.0-dynamic-custom-agent-topology.md` and `plans/007`–`008`.
+
+- `swarm-discussion-claude` — certified, released `v0.3.0`.
+- `swarm-discussion-codex` — certified, released `v0.3.0`.
+- `swarm-discussion` — thin aggregator pinning both certified adapters.
 
 ## Topology
 
@@ -61,6 +68,7 @@ docs/HOST-ADAPTERS.md     Codex and Claude thin host-adapter recipes
 docs/RUNTIME-PACKAGE-BOUNDARY.md runtime/plugin ownership contract
 docs/CAPABILITY-PROFILES.md expert capability profile contract
 docs/FUTURE-EXECUTORS.md  coordinator/executor research notes
+docs/adr/                 architecture decision records (ADR 0001: v0.3.0 topology)
 protocol/                 host-agnostic discussion protocol semantics
 profiles/                 built-in expert capability profiles
 runtime-contract.json     machine-readable plugin/runtime contract
@@ -68,6 +76,7 @@ runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
 scripts/vendor.py         pinned-SHA vendoring into adapter repos
 conformance/              adapter certification kit
+plans/                    landed implementation plans (001-008)
 tests/                    contract and smoke tests
 fixtures/                 phase fixtures, minimal-v2 e2e anchor, real legacy
                           discussions under fixtures/legacy/
@@ -99,6 +108,7 @@ python3 runtime/swarm_rt.py trace --dir fixtures/e2e/minimal-v2
 python3 runtime/swarm_rt.py evidence --dir fixtures/e2e/minimal-v2 --output /tmp/swarm-evidence.json
 python3 runtime/swarm_rt.py adapter-smoke --dir fixtures/e2e/minimal-v2
 python3 runtime/swarm_rt.py validate-loop fixtures/e2e/minimal-v2
+python3 runtime/swarm_rt.py validate-loop fixtures/e2e/projected-minimal-v2 --require-projection
 python3 runtime/swarm_rt.py validate-host-step fixtures/phase5/codex-host-step.json
 python3 runtime/swarm_rt.py capability-doctor
 python3 runtime/swarm_rt.py validate-round fixtures/phase1/discussions/complete/rounds/001.json
@@ -111,8 +121,10 @@ python3 -m pytest
 
 ## Relationship To Existing Repos
 
-- `swarm-discussion`: stable published plugin line and source of real smoke
-  artifacts.
-- `swarm-discussion-runtime`: isolated incubator for the v2 runtime model.
+- `swarm-discussion`: thin aggregator marketplace pinning the certified per-host
+  adapter releases (Claude + Codex, both `v0.3.0`). The v0.1 single-repo line is
+  preserved at the `v0.1.16` tag / `v0.1.x` branch.
+- `swarm-discussion-claude`, `swarm-discussion-codex`: the per-host adapters,
+  each vendoring this runtime at a pinned SHA.
 - `codex-agenteam`: reference architecture for runtime/state/events/prompt/evidence
   discipline, not a role model to copy wholesale.
