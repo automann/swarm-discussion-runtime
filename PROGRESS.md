@@ -833,3 +833,34 @@ Use this shape for every future implementation round:
   inconsistency.
 - Drift status: ON TRACK.
 - Next: re-vendor into swarm-discussion-codex; Codex continues the adapter.
+
+## 2026-06-21 - Plan 007: agentDescriptor provenance (v0.3.0)
+
+- Commit: this entry.
+- Roadmap alignment: v0.3.0 dynamic custom-agent topology (ADR 0001 D3); runtime plan 007.
+- Work summary:
+  - `transport.py`: new `_validate_agent_descriptor`; `_validate_spawn_order` now
+    preserves & validates an optional host-agnostic `agentDescriptor` per
+    spawn-order entry (projectedName required; projectedSha256 64-hex;
+    invocationForm enum; projectedPath/agentType/promptRef non-empty).
+    `write_transport_step` gained `agent_source_dir` and emits
+    `transport.customAgentProjection {projected,agentSourceDir,count}` ONLY when
+    descriptors are present (no-descriptor output stays byte-identical).
+  - `collect.py`: `collect_merge` attaches each spawn-order entry's
+    `agentDescriptor` beside its result (omitted when absent).
+  - `swarm_rt.py`: `transport-init --agent-source-dir`.
+  - schemas: documented optional `transport.customAgentProjection` in
+    host-transport (schemaVersion stays 1); added `spawn-order`,
+    `collect-result`, and `projection-manifest` schemas.
+- Verification: `.venv/bin/python -m pytest -q` -> 209 passed (was 198; +11 in
+  `tests/test_agent_descriptor.py`). `validate-loop fixtures/e2e/minimal-v2` ok;
+  `runtime-contract --full` ok; `git diff fixtures/` empty (backward compatible).
+- Failure coverage: bad descriptors (missing/empty projectedName, non-hex sha,
+  bad invocationForm, empty promptRef, non-object) -> `invalid_agent_descriptor`
+  and the entry is dropped; malformed descriptor fails the spawn-order schema;
+  projection-manifest schema accept/reject.
+- AgenTeam review: additive/optional; runtime stays source of truth; no adapter
+  code touched. The projected-fan-out CERTIFICATION gate (requiring descriptors)
+  is deliberately deferred to plan 008.
+- Drift status: ON TRACK.
+- Next: plan 008 (projection-required certification + projected fixture + topology docs).

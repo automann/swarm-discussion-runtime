@@ -22,7 +22,7 @@ Repo discipline: every executed plan appends a `PROGRESS.md` round entry
 | 004 | Cost instrumentation (prompt char counts, artifact sizes, event span) | P1 | M | 001, 003 | DONE |
 | 005 | context-generator.md template (founding-doc deliverable) | P2 | S | — | DONE |
 | 006 | Consolidate duplicated private helpers into `swarm/_shared.py` | P3 | S/M | 001–004 (ordering) | DONE (MESSAGE_ID + fsync_dir; _issue/_load_json dedup deferred) |
-| 007 | Runtime-owned `agentDescriptor` provenance for projected custom agents | P1 | M | — | TODO (v0.3.0; ADR 0001) |
+| 007 | Runtime-owned `agentDescriptor` provenance for projected custom agents | P1 | M | — | DONE (v0.3.0; ADR 0001) |
 | 008 | Certify projected custom-agent fan-out (gate + fixture + topology docs) | P1 | M | 007 | TODO (v0.3.0; ADR 0001) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
