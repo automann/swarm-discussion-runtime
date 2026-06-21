@@ -933,3 +933,28 @@ Use this shape for every future implementation round:
 - Next: cut a runtime vendoring commit; adapters (swarm-discussion-claude per
   plan 001; swarm-discussion-codex per its PRD) re-vendor, build the topology,
   retain a real projected smoke, and certify with --require-projection.
+
+## 2026-06-21 - Plan 008 follow-up: Codex adversarial review fixes
+
+- Commit: this entry.
+- Roadmap alignment: v0.3.0 (ADR 0001 D4); plan 008 "Review incorporated".
+- Work summary: hardened `runtime/swarm/projection.py` per the Codex adversarial
+  review of `492081a`:
+  - promptRef is now resolved through a strict `_safe_under` helper (rejects
+    absolute paths, backslashes, '.'/'..'/empty segments) + a required `prompts/`
+    prefix, so projection evidence cannot point outside the discussion tree.
+  - projectedPath is now required when projection is declared, and each
+    descriptor's projectedSha256 must equal the manifest createdPaths sha256 for
+    its path (`projection_manifest_mismatch`) — binding "which projected file
+    produced this payload" to the manifest hash record.
+- Verification: `.venv/bin/python -m pytest -q` -> 229 passed (was 225; +4:
+  absolute/traversal promptRef, required projectedPath, sha-drift-vs-manifest).
+  Projected fixture still certifies under `--require-projection`; minimal-v2
+  unaffected.
+- Failure coverage: absolute promptRef, traversal promptRef, omitted
+  projectedPath, well-formed-but-mismatched sha.
+- AgenTeam review: tightens the certification boundary so projection provenance is
+  bound to runtime-owned in-tree artifacts + the manifest hash record; gate
+  remains opt-in (inert for non-projected discussions).
+- Drift status: ON TRACK.
+- Next: cut a runtime vendoring commit; adapters re-vendor + build the topology.

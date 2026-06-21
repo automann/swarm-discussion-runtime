@@ -139,3 +139,23 @@ non-projected fixtures/discussions stay green.
 - Adapter implementation, re-vendor, real host-driven smokes, tags — the adapter
   repos, after this plan lands and a runtime commit is cut for vendoring
   (ADR 0001 rollout steps 2–4).
+
+## Review incorporated (2026-06-21, Codex adversarial review of `492081a`)
+
+Two [high] findings on the landed gate, now fixed:
+
+- **promptRef could escape the discussion tree.** `validate_projection` accepted
+  `(discussion_dir / promptRef).is_file()`, so an absolute or `..`-traversing
+  promptRef pointed certification evidence at any host file. Fixed with a strict
+  `_safe_under` resolver (rejects absolute paths, backslashes, empty/`.`/`..`
+  segments) plus a required `prompts/` prefix; negative tests cover absolute and
+  traversal refs.
+- **Descriptor↔manifest binding was forgeable.** `projectedSha256` only had to be
+  64-hex (never compared to the manifest) and `projectedPath` was optional. Fixed:
+  `projectedPath` is now required when projection is declared, and each
+  descriptor's `projectedSha256` must equal the manifest `createdPaths[path].sha256`
+  (`projection_manifest_mismatch`); negative tests cover an omitted path and a
+  well-formed-but-wrong sha.
+
+Suite after fixes: 229 (was 225). The projected fixture still certifies under
+`--require-projection` (its descriptor shas already match the manifest).

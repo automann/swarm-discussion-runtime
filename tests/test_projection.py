@@ -143,3 +143,44 @@ def test_invalid_custom_agent_projection_count(tmp_path: Path) -> None:
     host_step["transport"]["customAgentProjection"]["count"] = 0
     _dump(_phase(d) / "host-step.json", host_step)
     assert "invalid_custom_agent_projection" in _codes(validate_projection(d))
+
+
+# --- Codex adversarial-review findings: bind provenance to in-tree artifacts ---
+
+
+def test_prompt_ref_absolute_path_rejected(tmp_path: Path) -> None:
+    # An absolute promptRef must not escape the discussion tree even when it points
+    # at a real host file (the old `discussion_dir / ref` join silently honored it).
+    d = _copy(tmp_path)
+    cr = _load(_phase(d) / "collect-result.json")
+    cr["results"][0]["agentDescriptor"]["promptRef"] = "/etc/hosts"
+    _dump(_phase(d) / "collect-result.json", cr)
+    assert "unresolved_prompt_ref" in _codes(validate_projection(d))
+
+
+def test_prompt_ref_traversal_rejected(tmp_path: Path) -> None:
+    d = _copy(tmp_path)
+    cr = _load(_phase(d) / "collect-result.json")
+    cr["results"][0]["agentDescriptor"]["promptRef"] = "prompts/../../etc/hosts"
+    _dump(_phase(d) / "collect-result.json", cr)
+    assert "unresolved_prompt_ref" in _codes(validate_projection(d))
+
+
+def test_projected_path_required_when_projected(tmp_path: Path) -> None:
+    d = _copy(tmp_path)
+    cr = _load(_phase(d) / "collect-result.json")
+    cr["results"][0]["agentDescriptor"].pop("projectedPath")
+    _dump(_phase(d) / "collect-result.json", cr)
+    assert "missing_agent_descriptor" in _codes(validate_projection(d))
+
+
+def test_descriptor_sha_must_match_manifest(tmp_path: Path) -> None:
+    # A well-formed sha that does NOT match the manifest's recorded hash for that
+    # path must fail — the file->payload binding has to be real, not just hex.
+    d = _copy(tmp_path)
+    cr = _load(_phase(d) / "collect-result.json")
+    cr["results"][0]["agentDescriptor"]["projectedSha256"] = "b" * 64
+    _dump(_phase(d) / "collect-result.json", cr)
+    codes = _codes(validate_projection(d))
+    assert "projection_manifest_mismatch" in codes
+    assert "invalid_projected_sha" not in codes  # the sha is well-formed; only the binding is wrong

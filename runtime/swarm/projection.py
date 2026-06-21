@@ -38,12 +38,29 @@ def _load_json(path: Path) -> tuple[Any, dict[str, Any] | None]:
         return None, _issue("invalid_json", str(path), f"invalid JSON: {exc}")
 
 
+def _safe_under(discussion_dir: Path, rel: Any) -> Path | None:
+    """Resolve a relative path strictly under discussion_dir, or None if unsafe.
+
+    Rejects non-strings, backslashes, absolute paths, and empty/'.'/'..' segments
+    so a descriptor can never point certification evidence outside the discussion
+    artifact tree (an absolute promptRef would otherwise ignore discussion_dir).
+    """
+    if not isinstance(rel, str) or not rel.strip():
+        return None
+    if "\\" in rel:
+        return None
+    parts = rel.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    return discussion_dir / rel
+
+
 def validate_projection(discussion_dir: Path, require_projection: bool = False) -> dict[str, Any]:
     """Validate projected custom-agent provenance across a discussion's transport phases."""
     errors: list[dict[str, Any]] = []
     projected_phases = 0
     descriptor_names: set[str] = set()
-    descriptor_paths: set[str] = set()
+    descriptor_path_sha: dict[str, Any] = {}
 
     transport_root = discussion_dir / "transport"
     host_steps = sorted(transport_root.glob("r*/*/host-step.json")) if transport_root.exists() else []
@@ -88,14 +105,29 @@ def validate_projection(discussion_dir: Path, require_projection: bool = False) 
             else:
                 descriptor_names.add(name)
             sha = descriptor.get("projectedSha256")
-            if not (isinstance(sha, str) and _SHA256.match(sha)):
+            sha_ok = isinstance(sha, str) and bool(_SHA256.match(sha))
+            if not sha_ok:
                 errors.append(_issue("invalid_projected_sha", f"{where}.projectedSha256", "projectedSha256 must be 64 lowercase hex characters", sha))
             prompt_ref = descriptor.get("promptRef")
-            if not isinstance(prompt_ref, str) or not (discussion_dir / prompt_ref).is_file():
-                errors.append(_issue("unresolved_prompt_ref", f"{where}.promptRef", "promptRef must resolve to an existing artifact in the discussion", prompt_ref))
+            resolved_prompt = (
+                _safe_under(discussion_dir, prompt_ref)
+                if isinstance(prompt_ref, str) and prompt_ref.startswith("prompts/")
+                else None
+            )
+            if resolved_prompt is None or not resolved_prompt.is_file():
+                errors.append(
+                    _issue(
+                        "unresolved_prompt_ref",
+                        f"{where}.promptRef",
+                        "promptRef must be a relative path under prompts/ that resolves to an existing artifact in the discussion",
+                        prompt_ref,
+                    )
+                )
             projected_path = descriptor.get("projectedPath")
-            if isinstance(projected_path, str) and projected_path.strip():
-                descriptor_paths.add(projected_path)
+            if not (isinstance(projected_path, str) and projected_path.strip()):
+                errors.append(_issue("missing_agent_descriptor", f"{where}.projectedPath", "projectedPath is required when projection is declared"))
+            else:
+                descriptor_path_sha[projected_path] = sha if sha_ok else None
 
     if require_projection and projected_phases == 0:
         errors.append(
@@ -124,13 +156,22 @@ def validate_projection(discussion_dir: Path, require_projection: bool = False) 
                 if "deletionStatus" not in manifest:
                     errors.append(_issue("invalid_projection_manifest", f"{manifest_path}:deletionStatus", "deletionStatus is required"))
                 created = {
-                    entry.get("path")
+                    entry.get("path"): entry.get("sha256")
                     for entry in (manifest.get("createdPaths") or [])
                     if isinstance(entry, dict)
                 }
-                for projected_path in sorted(descriptor_paths):
+                for projected_path, descriptor_sha in sorted(descriptor_path_sha.items()):
                     if projected_path not in created:
                         errors.append(_issue("projection_manifest_mismatch", str(manifest_path), "descriptor projectedPath is not in manifest createdPaths", projected_path))
+                    elif descriptor_sha is not None and created[projected_path] != descriptor_sha:
+                        errors.append(
+                            _issue(
+                                "projection_manifest_mismatch",
+                                str(manifest_path),
+                                "descriptor projectedSha256 does not match manifest createdPaths sha256",
+                                {"projectedPath": projected_path, "descriptorSha256": descriptor_sha, "manifestSha256": created[projected_path]},
+                            )
+                        )
                 if run_id is not None:
                     for name in sorted(descriptor_names):
                         if run_id not in name:
