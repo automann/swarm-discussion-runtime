@@ -22,6 +22,8 @@ Repo discipline: every executed plan appends a `PROGRESS.md` round entry
 | 004 | Cost instrumentation (prompt char counts, artifact sizes, event span) | P1 | M | 001, 003 | DONE |
 | 005 | context-generator.md template (founding-doc deliverable) | P2 | S | — | DONE |
 | 006 | Consolidate duplicated private helpers into `swarm/_shared.py` | P3 | S/M | 001–004 (ordering) | DONE (MESSAGE_ID + fsync_dir; _issue/_load_json dedup deferred) |
+| 007 | Runtime-owned `agentDescriptor` provenance for projected custom agents | P1 | M | — | TODO (v0.3.0; ADR 0001) |
+| 008 | Certify projected custom-agent fan-out (gate + fixture + topology docs) | P1 | M | 007 | TODO (v0.3.0; ADR 0001) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -46,6 +48,21 @@ own context rather than protecting the user's main thread. Plans 002/004/005
 are unaffected (not running protocol on root does not change whether the
 runtime forces JSON assembly, whether cost is measurable, or the missing
 context template). No plan was invalidated.
+
+## Update 2026-06-21 — v0.3.0 dynamic custom-agent topology
+
+Plans 001–006 are DONE (suite ~198 tests at the time of this update). Plans 007
+and 008 open the **v0.3.0** line: a unified
+`parent → coordinator background session → dynamic, project-scoped custom expert
+subagents` topology on both hosts, decided in
+`docs/adr/0001-v0.3.0-dynamic-custom-agent-topology.md`. They are runtime-first
+(per the ADR rollout): 007 makes projection provenance a runtime-owned,
+host-agnostic `agentDescriptor`; 008 makes projected fan-out certifiable
+(opt-in gate + fixture) and updates the topology docs. **008 depends on 007.**
+Adapter work (`swarm-discussion-claude`, `swarm-discussion-codex`) and the
+aggregator pin bumps follow only after both land and a runtime commit is cut for
+vendoring. Baseline for these plans is the current `.venv/bin/python -m pytest -q`
+suite, not the 167 figure above.
 
 ## Intent-alignment context (why these six)
 
