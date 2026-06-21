@@ -864,3 +864,31 @@ Use this shape for every future implementation round:
   is deliberately deferred to plan 008.
 - Drift status: ON TRACK.
 - Next: plan 008 (projection-required certification + projected fixture + topology docs).
+
+## 2026-06-21 - Plan 007 follow-up: Codex adversarial review fixes
+
+- Commit: this entry.
+- Roadmap alignment: v0.3.0 (ADR 0001 D3); plan 007 "Review incorporated".
+- Work summary: closed three findings from the Codex adversarial review of
+  `40f4303`:
+  - `smoke.py` `_collect_core` now carries `agentDescriptor` into the
+    adapter-smoke replay comparison (was stripped, so descriptor tampering in a
+    stored collect-result passed certification).
+  - `adapter.py` `validate_host_transport_metadata` now validates the
+    `transport.customAgentProjection` block (projected bool required;
+    agentSourceDir non-empty str; count non-negative int; no extra keys) via
+    `invalid_custom_agent_projection`.
+  - `docs/ADAPTER-SPEC.md` gained the three new schemas in Required reading and a
+    "Dynamic custom-agent provenance (v0.3.0, additive)" subsection (status:
+    additive, not yet certification-required; enforcement in plan 008).
+- Verification: `.venv/bin/python -m pytest -q` -> 214 passed (was 209; +5 in
+  tests/test_agent_descriptor.py: replay drop/mutate + projection accept/reject).
+  validate-loop minimal-v2 ok; runtime-contract --full ok; `git diff fixtures/`
+  empty.
+- Failure coverage: dropped/mutated descriptor in stored collect-result ->
+  collect_replay_mismatch; malformed customAgentProjection (non-bool projected,
+  negative count, missing projected, extra key) -> invalid_custom_agent_projection.
+- AgenTeam review: closes the certification-boundary gap so the provenance added
+  in 007 is actually auditable; still additive (no-descriptor path unchanged).
+- Drift status: ON TRACK.
+- Next: plan 008 (projection-required certification + projected fixture + topology docs).

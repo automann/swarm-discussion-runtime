@@ -186,3 +186,29 @@ editing; it is the CLI seam where the descriptor enters).
 - The certification gate that *requires* descriptors for projected discussions,
   the projected fixture, and the topology doc updates → **plan 008**.
 - Any adapter code, re-vendor, or smoke → the adapter repos after 008.
+
+## Review incorporated (2026-06-21, Codex adversarial review of `40f4303`)
+
+Three findings on the landed 007, now fixed (commit follows):
+
+- **[high] Adapter-smoke replay stripped the descriptor.** `smoke.py:_collect_core`
+  rebuilt each result without `agentDescriptor`, so a stored `collect-result`
+  could drop/mutate provenance and still pass `adapter-smoke` (and thus
+  `certify_adapter`). Fixed: `_result_core` now carries `agentDescriptor` into the
+  replay comparison; negative tests assert dropped/mutated descriptors trigger
+  `collect_replay_mismatch`.
+- **[high] Host-step validator ignored `customAgentProjection`.** The hand-rolled
+  `adapter.py:validate_host_transport_metadata` validated `transport` but not the
+  new projection block, so malformed projection metadata passed
+  `validate-host-step`/`adapter-smoke`. Fixed: explicit validation (projected
+  bool required; agentSourceDir non-empty str; count non-negative int; no extra
+  keys) with `invalid_custom_agent_projection`; negative tests cover each shape.
+- **[medium] ADAPTER-SPEC didn't mention the new surface.** Added the three new
+  schemas to Required reading and a "Dynamic custom-agent provenance (v0.3.0,
+  additive)" subsection documenting `agentDescriptor`, `customAgentProjection`,
+  `projection-manifest.json`, and `--agent-source-dir`, with an explicit
+  "additive / not-yet-certified; enforcement in plan 008" status.
+
+Suite after fixes: 214 passed (was 209). The full topology recipe,
+`--require-projection` enforcement, and the `HOST-ADAPTERS.md` /
+`runtime-contract.json` updates remain plan 008 as designed.

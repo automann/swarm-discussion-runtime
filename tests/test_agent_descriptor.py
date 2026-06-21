@@ -13,8 +13,15 @@ from pathlib import Path
 
 import jsonschema
 
+from swarm.adapter import validate_host_transport_metadata
 from swarm.collect import collect_merge
-from swarm.transport import _validate_spawn_order, write_transport_step
+from swarm.smoke import _transport_replay
+from swarm.transport import (
+    _validate_spawn_order,
+    append_wait_batch,
+    collect_transport_step,
+    write_transport_step,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "schemas"
@@ -171,3 +178,79 @@ def test_projection_manifest_schema_accepts_and_rejects() -> None:
 
     bad = {"runId": "run1", "createdPaths": [{"path": "x"}], "deletionStatus": "nope"}
     assert _errors(bad, "projection-manifest.schema.json") != []
+
+
+# --- Codex adversarial-review findings: provenance must be gated at certification ---
+
+
+def _build_projected_phase(tmp_path: Path) -> tuple[Path, dict]:
+    spawn_order = [{"agentId": "a1", "persona": "architect", "agentDescriptor": dict(_FULL_DESCRIPTOR)}]
+    assert write_transport_step(
+        tmp_path, "claude", "d1", 1, "response", spawn_order, agent_source_dir=".claude/agents"
+    )["ok"]
+    assert append_wait_batch(
+        tmp_path, 1, "response", {"status": {"a1": {"completed": {"persona": "architect", "ok": True}}}}
+    )["ok"]
+    assert collect_transport_step(tmp_path, 1, "response")["ok"]
+    host_step_path = tmp_path / "transport" / "r001" / "response" / "host-step.json"
+    return host_step_path, json.loads(host_step_path.read_text())
+
+
+def _collect_result_path(tmp_path: Path) -> Path:
+    return tmp_path / "transport" / "r001" / "response" / "collect-result.json"
+
+
+def test_adapter_smoke_replay_passes_with_matching_descriptor(tmp_path: Path) -> None:
+    host_step_path, host_step = _build_projected_phase(tmp_path)
+    replay = _transport_replay(tmp_path, host_step_path, host_step)
+    assert replay["ok"] is True, replay["errors"]
+
+
+def test_adapter_smoke_replay_catches_dropped_descriptor(tmp_path: Path) -> None:
+    # finding 1: a stored collect-result that drops the descriptor must NOT pass replay.
+    host_step_path, host_step = _build_projected_phase(tmp_path)
+    cr_path = _collect_result_path(tmp_path)
+    stored = json.loads(cr_path.read_text())
+    stored["results"][0].pop("agentDescriptor", None)
+    cr_path.write_text(json.dumps(stored))
+    replay = _transport_replay(tmp_path, host_step_path, host_step)
+    assert replay["ok"] is False
+    assert any(e["code"] == "collect_replay_mismatch" for e in replay["errors"])
+
+
+def test_adapter_smoke_replay_catches_mutated_descriptor(tmp_path: Path) -> None:
+    host_step_path, host_step = _build_projected_phase(tmp_path)
+    cr_path = _collect_result_path(tmp_path)
+    stored = json.loads(cr_path.read_text())
+    stored["results"][0]["agentDescriptor"]["projectedName"] = "swarm-EVIL-architect"
+    cr_path.write_text(json.dumps(stored))
+    replay = _transport_replay(tmp_path, host_step_path, host_step)
+    assert replay["ok"] is False
+    assert any(e["code"] == "collect_replay_mismatch" for e in replay["errors"])
+
+
+def test_valid_custom_agent_projection_accepted(tmp_path: Path) -> None:
+    _, host_step = _build_projected_phase(tmp_path)
+    assert host_step["transport"]["customAgentProjection"]["projected"] is True
+    assert validate_host_transport_metadata(host_step)["ok"] is True
+
+
+def test_invalid_custom_agent_projection_rejected(tmp_path: Path) -> None:
+    # finding 2: malformed customAgentProjection must fail validate-host-step.
+    _, host_step = _build_projected_phase(tmp_path)
+
+    def _mutated(mutate) -> dict:
+        clone = json.loads(json.dumps(host_step))
+        mutate(clone["transport"]["customAgentProjection"])
+        return clone
+
+    mutations = [
+        lambda p: p.update({"projected": "yes"}),  # not a boolean
+        lambda p: p.update({"count": -1}),  # negative count
+        lambda p: p.pop("projected"),  # missing required field
+        lambda p: p.update({"bogus": 1}),  # unexpected key
+    ]
+    for mutate in mutations:
+        result = validate_host_transport_metadata(_mutated(mutate))
+        assert result["ok"] is False
+        assert any(e["code"] == "invalid_custom_agent_projection" for e in result["errors"]), result["errors"]

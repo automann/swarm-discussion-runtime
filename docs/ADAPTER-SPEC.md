@@ -60,6 +60,9 @@ evidence, not assumption.
 - `protocol/templates/context-generator.md` — the parent-brief authoring guide
   consumed by `context-build`.
 - `schemas/host-transport.schema.json` — the host-step metadata packet.
+- `schemas/spawn-order.schema.json`, `schemas/collect-result.schema.json`,
+  `schemas/projection-manifest.schema.json` — the v0.3.0 projection artifacts
+  (additive; see "Dynamic custom-agent provenance" below).
 
 ## Adapter deliverables
 
@@ -133,6 +136,38 @@ REAL host-driven discussion passes `adapter-smoke`, `validate-loop`, and
 `validate-discussion`. The bundled fixture proves the runtime; certification
 proves the adapter. Re-certify on every runtime re-vendor and before every
 adapter release.
+
+## Dynamic custom-agent provenance (v0.3.0, additive)
+
+As of runtime plan 007 the transport artifacts carry OPTIONAL, host-agnostic
+provenance for dynamically-projected custom expert agents. These fields are
+additive (`schemaVersion` stays `1`) and **not yet certification-required** — an
+old-path adapter remains valid until the enforcement in plan 008 / ADR 0001 D4
+lands. When an adapter projects per-topic custom agents it SHOULD emit:
+
+- **`agentDescriptor`** on each `spawn-order.json` entry, echoed on each
+  `collect-result.json` result (`schemas/spawn-order.schema.json`,
+  `schemas/collect-result.schema.json`): `projectedName` (required; MUST be
+  run-scoped — embed the run id), `projectedPath`, `projectedSha256`,
+  `agentType`, `invocationForm` (`explicit_spawn` | `at_mention`), `promptRef`.
+  The runtime preserves and validates it, and `adapter-smoke` replay fails if a
+  stored `collect-result` drops or mutates it.
+- **`transport.customAgentProjection`** on `host-step.json`
+  (`schemas/host-transport.schema.json`): `{projected, agentSourceDir, count}`,
+  validated by `validate-host-step`.
+- **`projection-manifest.json`** in the discussion dir
+  (`schemas/projection-manifest.schema.json`): `{runId, createdPaths[{path,
+  sha256}], deletionStatus, removedPaths, remainingPaths}` — the runtime-owned
+  record of what the adapter projected and whether it cleaned up.
+- CLI: `transport-init --agent-source-dir <dir>` records the projection source
+  directory (e.g. `.claude/agents` / `.codex/agents`).
+
+NOT yet in this spec (lands with plan 008): the full
+`parent → coordinator → projected-expert` topology recipe, projection-required
+certification (`certify_adapter --require-projection`), the cleanup zero-residue
+release gate, and the per-host `HOST-ADAPTERS.md` / `runtime-contract.json`
+updates. Do not treat projected provenance as certified product truth until then
+(ADR 0001 D4: probe-only until projection-required certification passes).
 
 ## Versioning
 
