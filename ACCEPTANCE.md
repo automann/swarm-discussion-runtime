@@ -61,14 +61,16 @@ claim holds only while all of the following stay true:
       (released `v0.3.0` vendoring runtime `04f4974`; v0.3.0 dynamic custom-agent
       topology — parent projects per-topic experts + `swarm-coordinator`
       background session — certified `--require-projection`, all gates pass).
-- [ ] `swarm-discussion-codex` certified on a real Codex-driven discussion,
-      built by Codex from the spec without cross-agent code review.
+- [x] `swarm-discussion-codex` certified on a real Codex-driven projected
+      discussion (released `v0.3.0` vendoring runtime `04f4974`; `.codex/agents`
+      custom-agent projection certified `--require-projection`, all gates pass;
+      built by Codex from the spec — verified by certification, not code review).
 - [x] `swarm-discussion` rebuilt as a thin aggregator that only accepts
-      certified adapter releases (2026-06-11, `v0.2.0`; marketplace pins the
-      certified Claude adapter; v0.1 line preserved at the `v0.1.16` tag and
-      `v0.1.x` branch).
-- The published plugin line keeps shipping until the first two boxes are
-  checked.
+      certified adapter releases; now pins BOTH certified adapters at `v0.3.0`
+      (Claude `.claude-plugin/marketplace.json`, Codex `.agents/plugins/marketplace.json`).
+      v0.1 line preserved at the `v0.1.16` tag and `v0.1.x` branch.
+- Both adapter milestones are met: the v0.3.0 dynamic custom-agent topology is
+  certified end-to-end on both hosts and live in the aggregator.
 
 ## Falsifiers
 
