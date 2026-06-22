@@ -958,3 +958,36 @@ Use this shape for every future implementation round:
   remains opt-in (inert for non-projected discussions).
 - Drift status: ON TRACK.
 - Next: cut a runtime vendoring commit; adapters re-vendor + build the topology.
+
+## 2026-06-23 - Plan 009: mode × stressPolicy (debate-depth contract)
+
+- Commit: this entry (runtime-first slice of ADR 0002).
+- Roadmap alignment: ROADMAP-NEXT F-1/F-2 + B-1/C-1; ADR 0002; plan 009 (steps 1-6 DONE).
+- Work summary: landed the runtime-first debate-depth contract:
+  (1) B-1 — projection-manifest off the artifact byte-anchor + a terminal-cleanup gate
+  (deletionStatus clean / empty remainingPaths under --require-projection) + the
+  projection state freshness-checked in trace/evidence; (2) `init --stress-policy` on the
+  manifest (auto|required|off, defaulted from mode); (3) `swarm/quality.py` — the structural
+  disagreement signal, the pre-synthesis `stress-check` decision (persisted with an
+  `argumentDigest`), the per-round `quality` block written by `finalize-round`, and the
+  recompute/forgery gates; (4) verified prompt-build already covers
+  position/argument/contrarian/response (stress = contrarian phase); (5) `validate_stress`
+  wired as `--require-stress` through validate-loop + certify_adapter; (6) the
+  `stress-minimal-v2` fixture certifying under both `--require-projection` and `--require-stress`.
+- Verification: `.venv/bin/python -m pytest -q` -> 263 passed (was 229). Both fixtures
+  certify; `certify_adapter --require-stress` fails through `validate-loop` on a
+  required-policy run with no stress pass.
+- Failure coverage: quality_signal_mismatch, quality_stress_required_mismatch,
+  stress_required_not_triggered, stress_response_missing, auto_stress_skipped,
+  stress_decision_unrecorded, argument_phase_mutated, projection_cleanup_incomplete,
+  projection_residue_present / projection_residue_unrecorded, invalid_deletion_status,
+  invalid_stress_policy.
+- AgenTeam review: the quality contract is runtime-owned + certifiable, so both host
+  adapters enforce one debate-depth contract (no cross-host drift). Four Codex
+  adversarial-review rounds hardened it (forgeable auto back-dating, self-reported
+  stressRequired, response-via-graph-edge, lost manifest freshness) — see plan 009
+  "Review incorporated" sections. Residual (substantive vs structural disagreement) is
+  host truth, proven by the retained real-host smoke (ADR 0002 R2).
+- Drift status: ON TRACK.
+- Next: ADR 0002 rollout step 2 — adapters carry `mode` + `stressPolicy`, orchestrate the
+  phases, re-vendor, and certify `--require-projection --require-stress`.

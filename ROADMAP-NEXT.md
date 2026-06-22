@@ -34,8 +34,8 @@ non-trivial, with evidence (a discussion id, validator code, file:line, or threa
 
 | ID | Type | Lane | Sev | Status | Summary |
 |----|------|------|-----|--------|---------|
-| B-1 | bug | runtime | high | open | `projection-manifest.json` mutation after evidence makes real runs fail `--require-projection` |
-| C-1 | chore | runtime / conformance | high | open | certification only runs on tidied smokes; add a real parent-finalized projected run |
+| B-1 | bug | runtime | high | **done** | `projection-manifest.json` mutation after evidence makes real runs fail `--require-projection` (plan 009 step 1) |
+| C-1 | chore | runtime / conformance | high | **done** | certification only runs on tidied smokes; add a real parent-finalized projected run (plan 009 step 1 + stress fixture) |
 | C-2 | chore | claude / codex | med | open | map the request to a protocol mode tier instead of free-text (`"normal"`) |
 | C-3 | chore | codex | low | open | prefer `@mention` expert invocation over explicit spawn (contract-preferred) |
 | C-4 | doc | runtime / claude / codex / aggregator | low | open | Modes table duplicated across READMEs — keep in sync or dedupe |
@@ -66,8 +66,8 @@ to `lightweight | standard | deep` (default `standard`) and pass it to `init --m
 
 | ID | Type | Lane | Sev | Status | Summary |
 |----|------|------|-----|--------|---------|
-| F-1 | feat | runtime / codex / claude | high | open | `mode` × `stressPolicy`: coordinator runs the full PROTOCOL.md debate (enforced anti-consensus), not a single-pass fan-out |
-| F-2 | feat | runtime | high | open | runtime disagreement signal (counter-edges, `genuineDisagreement`, `stressTriggered`) — powers `stressPolicy: auto` + certifies quality |
+| F-1 | feat | runtime / codex / claude | high | **in-progress** | `mode` × `stressPolicy`: coordinator runs the full PROTOCOL.md debate (enforced anti-consensus) — runtime slice landed (plan 009); adapter orchestration remains |
+| F-2 | feat | runtime | high | **done** | runtime disagreement signal (counter-edges, `genuineDisagreement`, `stressTriggered`) — powers `stressPolicy: auto` + certifies quality (plan 009) |
 | F-3 | feat | runtime | low | parking | advisory alignment-check / drift-score phase (founding "periodic alignment") |
 | F-4 | feat | runtime / adapters | med | parking | old-vs-new cost/quality benchmark (now unblocked: plan 004 done) |
 | F-5 | feat | runtime | low | parking | persona-roster JSON validator (generation stays LLM-owned) |

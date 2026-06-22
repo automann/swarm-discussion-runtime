@@ -28,7 +28,7 @@ a numbered plan here before implementation.
 | 006 | Consolidate duplicated private helpers into `swarm/_shared.py` | P3 | S/M | 001–004 (ordering) | DONE (MESSAGE_ID + fsync_dir; _issue/_load_json dedup deferred) |
 | 007 | Runtime-owned `agentDescriptor` provenance for projected custom agents | P1 | M | — | DONE (v0.3.0; ADR 0001) |
 | 008 | Certify projected custom-agent fan-out (gate + fixture + topology docs) | P1 | M | 007 | DONE (v0.3.0; ADR 0001) |
-| 009 | `mode` × `stressPolicy`: disagreement signal + quality contract + `--require-stress` | P1 | M/L | 008; ADR 0002 | TODO |
+| 009 | `mode` × `stressPolicy`: disagreement signal + quality contract + `--require-stress` | P1 | M/L | 008; ADR 0002 | DONE (v0.3.x; ADR 0002) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 

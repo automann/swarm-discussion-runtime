@@ -57,6 +57,11 @@ Runtime owns:
 - (v0.3.0) Projected custom-agent provenance: preserving `agentDescriptor`,
   and validating `customAgentProjection` + the projection-manifest shape and
   run-scoped naming (`validate-loop [--require-projection]`).
+- (v0.3.x) The discussion-quality contract: the structural disagreement signal,
+  the pre-synthesis `stress-check` decision, the per-round `quality` block written
+  at finalize, and its certification (`validate-loop [--require-stress]`, ADR 0002).
+  Adapters orchestrate the `position/argument/stress/response` phases but MUST NOT
+  write a parallel quality store.
 
 Runtime must not spawn host agents, wait on host agents, own parent conversation
 orchestration, install plugins, or manage marketplaces.

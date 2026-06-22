@@ -77,7 +77,7 @@ runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
 scripts/vendor.py         pinned-SHA vendoring into adapter repos
 conformance/              adapter certification kit
-plans/                    implementation plans (001-008 landed; 009 planned)
+plans/                    implementation plans (001-009 landed)
 tests/                    contract and smoke tests
 fixtures/                 phase fixtures, minimal-v2 e2e anchor, real legacy
                           discussions under fixtures/legacy/
@@ -110,6 +110,7 @@ python3 runtime/swarm_rt.py evidence --dir fixtures/e2e/minimal-v2 --output /tmp
 python3 runtime/swarm_rt.py adapter-smoke --dir fixtures/e2e/minimal-v2
 python3 runtime/swarm_rt.py validate-loop fixtures/e2e/minimal-v2
 python3 runtime/swarm_rt.py validate-loop fixtures/e2e/projected-minimal-v2 --require-projection
+python3 runtime/swarm_rt.py validate-loop fixtures/e2e/stress-minimal-v2 --require-projection --require-stress
 python3 runtime/swarm_rt.py validate-host-step fixtures/phase5/codex-host-step.json
 python3 runtime/swarm_rt.py capability-doctor
 python3 runtime/swarm_rt.py validate-round fixtures/phase1/discussions/complete/rounds/001.json
