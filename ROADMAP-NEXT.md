@@ -66,8 +66,8 @@ to `lightweight | standard | deep` (default `standard`) and pass it to `init --m
 
 | ID | Type | Lane | Sev | Status | Summary |
 |----|------|------|-----|--------|---------|
-| F-1 | feat | codex / claude (/ runtime) | high | open | coordinator runs the full PROTOCOL.md debate, not a single-pass fan-out |
-| F-2 | feat | runtime | med | open | discussion-quality signal (disagreement metrics) in trace/evidence |
+| F-1 | feat | runtime / codex / claude | high | open | `mode` × `stressPolicy`: coordinator runs the full PROTOCOL.md debate (enforced anti-consensus), not a single-pass fan-out |
+| F-2 | feat | runtime | high | open | runtime disagreement signal (counter-edges, `genuineDisagreement`, `stressTriggered`) — powers `stressPolicy: auto` + certifies quality |
 | F-3 | feat | runtime | low | parking | advisory alignment-check / drift-score phase (founding "periodic alignment") |
 | F-4 | feat | runtime / adapters | med | parking | old-vs-new cost/quality benchmark (now unblocked: plan 004 done) |
 | F-5 | feat | runtime | low | parking | persona-roster JSON validator (generation stays LLM-owned) |
@@ -81,14 +81,61 @@ tension map, blind/parallel position declarations, contrarian stress-test of the
 strongest consensus, cross-domain/historian on standard/deep, a disagreement
 budget/quality gate, and a second round when the budget warrants. This is the
 product's core value ("stop your AI from agreeing with itself"); v0.3.0 proved
-projection + certification, never the panel. Needs a numbered plan; prompt-build
-already supports the documented phases, so most of the work is adapter-side
-orchestration.
+projection + certification, never the panel. Needs a numbered plan — see **Design:
+`mode` × `stressPolicy`** below for the agreed shape (converged independently with
+Codex). prompt-build already supports the documented phases and transport accepts
+arbitrary phase names, so phase 1 is adapter-side orchestration; phase 2 sinks the
+quality contract into the runtime schema for cross-host parity.
 
 **F-2 — quality signal.** So a no-disagreement fan-out can be detected automatically:
 have `trace` / `evidence` report counts of `counters`, position shifts, rounds, and
 fixed-roles-run, and let certification optionally warn when a "discussion" engineered
 no disagreement. Enables certifying *quality*, not just structure. (Supports F-1.)
+
+### Design direction: `mode` × `stressPolicy` (converged with Codex, 2026-06-22)
+
+Two independent evaluations of `govspec-20260622-182432` reached the same verdict —
+the run was *too smooth* (zero `counters` edges, no position shifts). The agreed fix is
+**not** a fourth mode but an **orthogonal secondary option**:
+
+- **`mode`** (`lightweight | standard | deep`, existing) — cost/depth: expert count,
+  rounds, whether Cross-Domain/Historian run, artifact complexity.
+- **`stressPolicy`** (`auto | required | off`, new) — whether an anti-consensus
+  **stress pass** must run and genuine disagreement is verified before synthesis.
+  - `auto` — trigger a stress pass when the round's argument graph has no
+    `counters`/`questions` (or the disagreement sub-score is low). *This is the F-2
+    signal used as a gate.*
+  - `required` — always run the stress pass and require expert responses.
+  - `off` — explicit fast convergence.
+  - Default pairing: `lightweight → off|auto`, `standard → auto`, `deep → required`.
+    So "deep design" = `deep + required`; reuse `mode`, don't add a tier.
+
+**Bounded loop** (no "loop until satisfied" — it burns context and isn't reproducible):
+position (blind: stance, confidence, `wouldChangeIf`) → argument (must cite a peer; ≥1
+`counters`/`questions` or escalate) → **contrarian stress of the *strongest* consensus**
+(load-bearing assumption, failure scenario, what would disprove it) → response +
+`positionShift: none|minor|major` (cite the trigger msg) → quality gate
+(`synthesize|continue|deep-dive|different-angle`) → Historian synthesis separating
+argued-consensus / majority-only / unrefuted-minority / open-questions. Caps:
+`standard` ≤ 1 stress pass; `deep` ≤ 2 rounds + synthesis.
+
+**Acceptance (certifiable — ties F-2 + C-1):** `argumentGraph` has ≥1
+`counters`/`questions`, else `stressTriggered: true` is recorded; ≥1 expert responded to
+the stress; synthesis carries a `minorityReport` (or explicit "no unrefuted minority");
+the quality gate emits a `genuineDisagreement` sub-score; `positionShift: none` is
+allowed but must say why.
+
+**Landing (runtime-first, like the v0.3.0 `agentDescriptor` decision):**
+1. Adapter phase plan + parent packet / coordinator contract carry `mode` + `stressPolicy`
+   and orchestrate `position → argument → stress → response → synthesis` over the
+   existing arbitrary-phase transport (`transport/r001/<phase>/…`) — no new transport.
+2. Sink the quality fields into the runtime round/evidence schema so **both** adapters
+   (Codex *and* Claude — identical gap) enforce it and certification checks it:
+   `quality: { stressPolicy, stressTriggered, genuineDisagreement, counterEdgeCount,
+   minorityReportPresent }`.
+
+Decision note: phase 1 may be adapter-led to move fast, but the quality contract must
+land in the runtime (phase 2) or the two hosts will drift. Codex thread: `019ed4b1`.
 
 *(F-3 / F-4 / F-5 carried over from `plans/README.md` "deferred/rejected"; revisit
 with real-run data.)*
@@ -97,7 +144,9 @@ with real-run data.)*
 
 - Multi-role / sub-coordinator orchestration (S2) — see `docs/FUTURE-EXECUTORS.md`; deferred.
 - Canonical mode names: accept aliases (e.g. `"normal"` → `standard`) or reject
-  non-tier modes at `init`?
+  non-tier modes at `init`? (Resolved on the *fourth-mode* question: keep the three
+  tiers and add an orthogonal `stressPolicy` — see F-1 design. The alias-vs-reject
+  decision for non-tier strings is still open.)
 - Is F-1 purely adapter-side, or should the runtime offer a higher-level "drive round"
   helper so both adapters don't re-implement the phase loop? (A composed `round-step`
   command was previously rejected — revisit only if both adapters show duplication.)
@@ -106,3 +155,6 @@ with real-run data.)*
 
 - 2026-06-22 — seeded from the `govspec-20260622-182432` real Codex run evaluation
   (B-1, C-1, C-2, C-3, F-1, F-2) and carried-over deferrals from `plans/README.md`.
+- 2026-06-22 — folded the `mode` × `stressPolicy` design into F-1/F-2 after an
+  independent Codex evaluation (thread `019ed4b1`) reached the same "no effective
+  debate" verdict and proposed `stressPolicy` as an orthogonal secondary option.
