@@ -94,6 +94,9 @@ no disagreement. Enables certifying *quality*, not just structure. (Supports F-1
 
 ### Design direction: `mode` × `stressPolicy` (converged with Codex, 2026-06-22)
 
+Ratified as **[ADR 0002](docs/adr/0002-mode-stresspolicy-debate-depth.md)** (Accepted);
+`plans/009` implements it, runtime-first.
+
 Two independent evaluations of `govspec-20260622-182432` reached the same verdict —
 the run was *too smooth* (zero `counters` edges, no position shifts). The agreed fix is
 **not** a fourth mode but an **orthogonal secondary option**:
@@ -158,3 +161,5 @@ with real-run data.)*
 - 2026-06-22 — folded the `mode` × `stressPolicy` design into F-1/F-2 after an
   independent Codex evaluation (thread `019ed4b1`) reached the same "no effective
   debate" verdict and proposed `stressPolicy` as an orthogonal secondary option.
+- 2026-06-22 — ratified the design as **ADR 0002** (Accepted); `plans/009` to
+  implement it, runtime-first.

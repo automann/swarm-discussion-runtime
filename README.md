@@ -69,7 +69,7 @@ docs/HOST-ADAPTERS.md     Codex and Claude thin host-adapter recipes
 docs/RUNTIME-PACKAGE-BOUNDARY.md runtime/plugin ownership contract
 docs/CAPABILITY-PROFILES.md expert capability profile contract
 docs/FUTURE-EXECUTORS.md  coordinator/executor research notes
-docs/adr/                 architecture decision records (ADR 0001: v0.3.0 topology)
+docs/adr/                 architecture decision records (0001 v0.3.0 topology; 0002 debate depth)
 protocol/                 host-agnostic discussion protocol semantics
 profiles/                 built-in expert capability profiles
 runtime-contract.json     machine-readable plugin/runtime contract
