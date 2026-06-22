@@ -1,0 +1,19 @@
+{
+  "createdPaths": [
+    {
+      "path": ".codex/agents/swarm-projmin1-architect.toml",
+      "sha256": "6ad78edaa350e2def000d2f950cd39d3b00ae66f11c3b15c5b591d77f12d0bca"
+    },
+    {
+      "path": ".codex/agents/swarm-projmin1-contrarian.toml",
+      "sha256": "d0f4e07b2054ed2ae5bdfe47dcb516cf41bf55f0adf35a1a162e4b67ace22f16"
+    }
+  ],
+  "deletionStatus": "clean",
+  "remainingPaths": [],
+  "removedPaths": [
+    ".codex/agents/swarm-projmin1-architect.toml",
+    ".codex/agents/swarm-projmin1-contrarian.toml"
+  ],
+  "runId": "projmin1"
+}

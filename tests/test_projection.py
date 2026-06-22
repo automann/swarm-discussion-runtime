@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "schemas"
 PROJECTED = ROOT / "fixtures" / "e2e" / "projected-minimal-v2"
 MINIMAL = ROOT / "fixtures" / "e2e" / "minimal-v2"
+STRESS = ROOT / "fixtures" / "e2e" / "stress-minimal-v2"
 
 
 def _phase(d: Path) -> Path:
@@ -265,3 +266,20 @@ def test_persisted_invalid_stress_policy_rejected(tmp_path: Path) -> None:
     manifest["stressPolicy"] = "bogus"
     _dump(d / "manifest.json", manifest)
     assert "invalid_stress_policy" in _codes(validate_discussion_dir(d))
+
+
+# --- step 6: the stress fixture is the positive end-to-end proof -------------
+
+
+def test_stress_fixture_passes_every_certify_validator() -> None:
+    # a genuine projected discussion that ran a stress pass + response under
+    # stressPolicy=required must certify under BOTH v0.3.x release modes.
+    assert validate_projection(STRESS, require_projection=True)["ok"] is True
+    assert validate_minimal_loop(STRESS, require_projection=True, require_stress=True)["ok"] is True
+    assert validate_discussion_dir(STRESS)["ok"] is True
+    assert validate_minimal_loop(STRESS)["summary"]["stressPolicy"] == "required"
+
+
+def test_stress_fixture_quality_block_conforms_to_schema() -> None:
+    quality = _load(STRESS / "rounds" / "001.json")["quality"]
+    assert _schema_errors(quality, "quality.schema.json") == []

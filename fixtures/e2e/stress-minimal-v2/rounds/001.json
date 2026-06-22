@@ -1,0 +1,126 @@
+{
+  "roundId": 1,
+  "topic": "Minimal v2 discussion loop",
+  "mode": "deep",
+  "timestamp": "2026-06-09T00:00:00Z",
+  "messages": [
+    {
+      "id": "r1-msg-001",
+      "from": "architect",
+      "type": "position_declaration",
+      "content": {
+        "summary": "Use runtime artifacts as the source of truth for the minimal loop."
+      },
+      "references": []
+    },
+    {
+      "id": "r1-msg-002",
+      "from": "contrarian",
+      "type": "argument",
+      "content": {
+        "summary": "A host adapter can drift unless the loop validates host-step, fan-in, and capability evidence."
+      },
+      "references": [
+        {
+          "targetId": "r1-msg-001",
+          "relation": "questions"
+        }
+      ]
+    },
+    {
+      "id": "r1-msg-003",
+      "from": "contrarian",
+      "type": "stress_test",
+      "content": {
+        "summary": "Stress the strongest consensus: if every host trusts local artifacts, a host that fabricates a clean trace certifies with no real fan-out. Load-bearing assumption: artifacts were produced by the claimed agents. Disproof: a retained host log that contradicts the trace."
+      },
+      "references": [
+        {
+          "targetId": "r1-msg-001",
+          "relation": "counters"
+        }
+      ]
+    },
+    {
+      "id": "r1-msg-004",
+      "from": "architect",
+      "type": "response",
+      "content": {
+        "summary": "Concede the gap: certification proves structure, not host truth. Narrow the claim to structural consistency and require a retained real-host smoke for the rest."
+      },
+      "references": [
+        {
+          "targetId": "r1-msg-003",
+          "relation": "extends"
+        }
+      ]
+    }
+  ],
+  "argumentGraph": [
+    {
+      "from": "r1-msg-002",
+      "to": "r1-msg-001",
+      "relation": "questions"
+    },
+    {
+      "from": "r1-msg-003",
+      "to": "r1-msg-001",
+      "relation": "counters"
+    },
+    {
+      "from": "r1-msg-004",
+      "to": "r1-msg-003",
+      "relation": "extends"
+    }
+  ],
+  "positionShifts": [
+    {
+      "type": "position_shift",
+      "expert": "architect",
+      "from": "Local artifacts are sufficient proof of the loop.",
+      "to": "Local artifacts prove structure; host truth needs a retained real-host smoke.",
+      "trigger": "r1-msg-003",
+      "reasoning": "The contrarian stress surfaced a fabricated-trace bypass the structural gate cannot catch."
+    }
+  ],
+  "synthesis": {
+    "recommendation": "Treat the artifact tree as structural proof of the loop; require a retained real-host smoke for host truth.",
+    "qualityScore": 0.9,
+    "minorityReport": [
+      {
+        "position": "Structural certification alone is enough for low-stakes runs.",
+        "advocate": "contrarian",
+        "reason": "A retained smoke may not be worth the cost for trivial discussions.",
+        "stillValid": true
+      }
+    ]
+  },
+  "metadata": {
+    "messageCount": 4,
+    "participants": [
+      "architect",
+      "contrarian"
+    ],
+    "referenceCount": 3
+  },
+  "personaContextLog": {
+    "architect": {
+      "r1-msg-001": "full",
+      "r1-msg-002": "full",
+      "r1-msg-003": "full"
+    },
+    "contrarian": {
+      "r1-msg-001": "full",
+      "r1-msg-002": "full"
+    }
+  },
+  "quality": {
+    "stressPolicy": "required",
+    "stressRequired": true,
+    "stressTriggered": true,
+    "counterEdgeCount": 2,
+    "positionShiftCount": 1,
+    "genuineDisagreement": 6,
+    "minorityReportPresent": true
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "stress-minimal-v2",
+  "title": "Stress-minimal v2 loop (engineered disagreement)",
+  "mode": "deep",
+  "stressPolicy": "required",
+  "schemaVersion": 2,
+  "status": "completed",
+  "currentRound": 1,
+  "personas": [
+    "architect",
+    "contrarian"
+  ]
+}
