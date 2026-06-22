@@ -107,11 +107,15 @@ in the same evidence path this plan extends, so fix it first (Step 1).
    conditions, `wouldChangeIf`), `argument` (must cite ≥1 peer; relation ∈
    `supports|counters|extends|questions`), `stress` (contrarian attacks the *strongest*
    consensus — load-bearing assumption, failure scenario, what would disprove it),
-   `response` (declares `positionShift: none|minor|major` with a cited trigger). Extend
-   the prompt templates for any missing phase. **Open question to settle here**: does
-   `stress` reuse the `protocol/PROTOCOL.md` **Contrarian** fixed role (present in
-   `standard`/`deep`) or a coordinator-generated stress prompt for `lightweight + auto`?
-   Decide and record in PROGRESS.
+   `response` (declares `positionShift: none|minor|major` with a cited trigger).
+   **Resolved (verify-only, no code change):** all four already exist in `prompt.py` —
+   `declaration` (blind position: `position/confidence/conditions/wouldChangeIf/keyRisk`),
+   `argumentation`, `contrarian` (the stress pass; `_fixed_role_intro` "target the
+   strongest consensus, not the weakest argument"), and `response`
+   (`positionShift`/`shiftTriggerIds`). The open question resolves: the stress pass
+   **reuses the existing `contrarian` fixed-role phase** on any mode (it emits a
+   `stress_test` message, exactly what `disagreement_signal` detects as `stressTriggered`),
+   so no separate coordinator stress prompt or new template is needed.
 
 5. **`--require-stress` certification mode (ADR 0002 D2).** Add the flag to
    `validate-loop` and `conformance/certify_adapter.py`, behavior **derived from the

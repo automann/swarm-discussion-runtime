@@ -44,7 +44,7 @@ def _run_json(command: list[str]) -> tuple[dict, int]:
     return payload, completed.returncode
 
 
-def certify(discussion: Path, runtime: Path, vendored: Path | None, require_projection: bool = False) -> dict:
+def certify(discussion: Path, runtime: Path, vendored: Path | None, require_projection: bool = False, require_stress: bool = False) -> dict:
     checks: list[dict] = []
 
     def record(name: str, payload: dict, returncode: int) -> bool:
@@ -79,6 +79,8 @@ def certify(discussion: Path, runtime: Path, vendored: Path | None, require_proj
     loop_command = [sys.executable, str(runtime), "validate-loop", str(discussion)]
     if require_projection:
         loop_command.append("--require-projection")
+    if require_stress:
+        loop_command.append("--require-stress")
     loop, code = _run_json(loop_command)
     record("validate-loop", loop, code)
 
@@ -92,6 +94,7 @@ def certify(discussion: Path, runtime: Path, vendored: Path | None, require_proj
         "discussionDir": str(discussion),
         "runtime": str(runtime),
         "requireProjection": require_projection,
+        "requireStress": require_stress,
         "checks": checks,
     }
 
@@ -106,8 +109,13 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="v0.3.0 release mode: require a projected discussion with consistent provenance (ADR 0001 D4)",
     )
+    parser.add_argument(
+        "--require-stress",
+        action="store_true",
+        help="require the discussion to satisfy its declared stressPolicy (engineered disagreement; ADR 0002 D2)",
+    )
     args = parser.parse_args(argv)
-    result = certify(args.discussion, args.runtime, args.vendored, require_projection=args.require_projection)
+    result = certify(args.discussion, args.runtime, args.vendored, require_projection=args.require_projection, require_stress=args.require_stress)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["ok"] else 1
 

@@ -12,6 +12,7 @@ from swarm.quality import (
     stress_check,
     stress_required,
     validate_quality_block,
+    validate_stress,
 )
 
 
@@ -128,3 +129,61 @@ def test_stress_check_missing_round(tmp_path: Path) -> None:
     result = stress_check(d)
     assert result["ok"] is False
     assert result["errors"][0]["code"] == "missing_round"
+
+
+# --- step 5: the --require-stress certification gate -------------------------
+
+
+def _disc_with_round(tmp_path: Path, name: str, policy: str, messages, graph=None) -> Path:
+    d = tmp_path / name
+    (d / "rounds").mkdir(parents=True)
+    (d / "manifest.json").write_text(json.dumps({"id": "x", "stressPolicy": policy}))
+    (d / "rounds" / "001.json").write_text(json.dumps(_round(messages=messages, graph=graph or [])))
+    return d
+
+
+def _codes(result) -> set:
+    return {e["code"] for e in result["errors"]}
+
+
+def test_validate_stress_inert_without_flag(tmp_path: Path) -> None:
+    d = _disc_with_round(tmp_path, "a", "required", [{"id": "r1-msg-001", "type": "argument"}])
+    assert validate_stress(d, require_stress=False)["ok"] is True  # opt-in: inert without the flag
+
+
+def test_validate_stress_off_makes_no_assertion(tmp_path: Path) -> None:
+    d = _disc_with_round(tmp_path, "g", "off", [{"id": "r1-msg-001", "type": "argument"}])
+    assert validate_stress(d, require_stress=True)["ok"] is True
+
+
+def test_validate_stress_required_needs_stress_pass(tmp_path: Path) -> None:
+    d = _disc_with_round(tmp_path, "b", "required", [{"id": "r1-msg-001", "type": "argument"}])
+    assert "stress_required_not_triggered" in _codes(validate_stress(d, require_stress=True))
+
+
+def test_validate_stress_required_with_stress_and_response_passes(tmp_path: Path) -> None:
+    messages = [
+        {"id": "r1-msg-001", "type": "argument"},
+        {"id": "r1-msg-002", "type": "stress_test"},
+        {"id": "r1-msg-003", "type": "response", "references": [{"targetId": "r1-msg-002", "relation": "counters"}]},
+    ]
+    d = _disc_with_round(tmp_path, "c", "required", messages)
+    assert validate_stress(d, require_stress=True)["ok"] is True
+
+
+def test_validate_stress_response_missing(tmp_path: Path) -> None:
+    messages = [{"id": "r1-msg-001", "type": "argument"}, {"id": "r1-msg-002", "type": "stress_test"}]
+    d = _disc_with_round(tmp_path, "d", "required", messages)
+    assert "stress_response_missing" in _codes(validate_stress(d, require_stress=True))
+
+
+def test_validate_stress_auto_skipped(tmp_path: Path) -> None:
+    d = _disc_with_round(tmp_path, "e", "auto", [{"id": "r1-msg-001", "type": "argument"}, {"id": "r1-msg-002", "type": "argument"}])
+    assert "auto_stress_skipped" in _codes(validate_stress(d, require_stress=True))
+
+
+def test_validate_stress_auto_with_challenge_edge_ok(tmp_path: Path) -> None:
+    messages = [{"id": "r1-msg-001", "type": "argument"}, {"id": "r1-msg-002", "type": "argument"}]
+    graph = [{"from": "r1-msg-002", "to": "r1-msg-001", "relation": "counters"}]
+    d = _disc_with_round(tmp_path, "f", "auto", messages, graph)
+    assert validate_stress(d, require_stress=True)["ok"] is True

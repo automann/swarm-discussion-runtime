@@ -371,7 +371,7 @@ def cmd_capability_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_validate_loop(args: argparse.Namespace) -> int:
-    result = validate_minimal_loop(args.discussion_dir, require_projection=args.require_projection)
+    result = validate_minimal_loop(args.discussion_dir, require_projection=args.require_projection, require_stress=args.require_stress)
     summary = {"ok": result["ok"], "summary": result.get("summary", {}), "errors": result.get("errors", [])}
     emit_summary(result, summary, args.full)
     return 0 if result["ok"] else 1
@@ -560,6 +560,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--require-projection",
         action="store_true",
         help="Fail unless the discussion declares projected custom agents with consistent provenance (v0.3.0 release mode; ADR 0001 D4)",
+    )
+    validate_loop.add_argument(
+        "--require-stress",
+        action="store_true",
+        help="Fail unless the discussion satisfies its declared stressPolicy (engineered disagreement; ADR 0002 D2)",
     )
     validate_loop.set_defaults(func=cmd_validate_loop)
 

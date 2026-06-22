@@ -249,3 +249,56 @@ def stress_check(discussion_dir: Path, round_id: int | None = None) -> dict[str,
         "stressRequired": required,
         "reason": reason,
     }
+
+
+def _stress_has_response(record: dict[str, Any]) -> bool:
+    """True if a response message references a stress_test message in this round."""
+    messages = record.get("messages") if isinstance(record, dict) else None
+    messages = messages if isinstance(messages, list) else []
+    stress_ids = {m.get("id") for m in messages if isinstance(m, dict) and m.get("type") == "stress_test"}
+    if not stress_ids:
+        return False
+    response_ids = {m.get("id") for m in messages if isinstance(m, dict) and m.get("type") == "response"}
+    for edge in record.get("argumentGraph") or []:
+        if isinstance(edge, dict) and edge.get("from") in response_ids and edge.get("to") in stress_ids:
+            return True
+    for message in messages:
+        if isinstance(message, dict) and message.get("type") == "response":
+            for ref in message.get("references") or []:
+                if isinstance(ref, dict) and ref.get("targetId") in stress_ids:
+                    return True
+    return False
+
+
+def validate_stress(discussion_dir: Path, require_stress: bool = False) -> dict[str, Any]:
+    """Certification gate for engineered disagreement (``--require-stress``, ADR 0002 D2).
+
+    Inert unless ``require_stress``; then keyed off the declared stressPolicy:
+      - any policy, when a stress pass ran: a response must reference the stress message
+        (``stress_response_missing``);
+      - ``required``: every round must run a stress pass (``stress_required_not_triggered``);
+      - ``auto``: a round whose argument phase had no challenge edges must run a stress pass
+        (``auto_stress_skipped``);
+      - ``off`` (or absent): no debate-depth assertion.
+    """
+    errors: list[dict[str, Any]] = []
+    manifest = _load_json(discussion_dir / "manifest.json")
+    policy = effective_stress_policy(manifest)
+    rounds_dir = discussion_dir / "rounds"
+    round_files = sorted(rounds_dir.glob("[0-9][0-9][0-9].json")) if rounds_dir.exists() else []
+    if require_stress and policy != "off":
+        for round_file in round_files:
+            record = _load_json(round_file)
+            if not isinstance(record, dict):
+                continue
+            where = str(round_file)
+            triggered = disagreement_signal(record)["stressTriggered"]
+            if triggered and not _stress_has_response(record):
+                errors.append(_issue("stress_response_missing", where, "a stress pass ran but no response references the stress_test message"))
+            if policy == "required" and not triggered:
+                errors.append(_issue("stress_required_not_triggered", where, "stressPolicy=required but this round ran no stress pass"))
+            if policy == "auto":
+                pre = disagreement_signal(record, pre_stress=True)["counterEdgeCount"]
+                if stress_required("auto", pre) and not triggered:
+                    errors.append(_issue("auto_stress_skipped", where, "stressPolicy=auto: argument round had no challenge edges but no stress pass ran"))
+    return {"ok": not errors, "errors": errors, "summary": {"stressPolicy": policy, "rounds": len(round_files)}}
