@@ -12,6 +12,7 @@ from typing import Any
 from swarm import __version__, planned_commands
 from swarm.adapter import validate_host_transport_metadata
 from swarm.audit import build_evidence, build_trace
+from swarm.quality import stress_check
 from swarm.capabilities import (
     capability_doctor_report,
     default_profile_path,
@@ -280,6 +281,12 @@ def cmd_evidence(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_stress_check(args: argparse.Namespace) -> int:
+    result = stress_check(args.dir, args.round)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result.get("ok") else 1
+
+
 def cmd_validate_host_step(args: argparse.Namespace) -> int:
     result = validate_host_transport_metadata(load_json(args.host_step))
     summary = {"ok": result["ok"], "summary": result.get("summary", {})}
@@ -480,6 +487,11 @@ def build_parser() -> argparse.ArgumentParser:
     trace.add_argument("--dir", type=Path, required=True, help="Discussion directory")
     trace.add_argument("--output", type=Path, help="Optional trace JSON output path")
     trace.set_defaults(func=cmd_trace)
+
+    stress_check_p = sub.add_parser("stress-check", help="Pre-synthesis decision: must a stress pass run for the current round?")
+    stress_check_p.add_argument("--dir", type=Path, required=True, help="Discussion directory")
+    stress_check_p.add_argument("--round", type=int, default=None, help="Round id (default: current/latest)")
+    stress_check_p.set_defaults(func=cmd_stress_check)
 
     evidence = sub.add_parser("evidence", help="Build portable discussion evidence")
     evidence.add_argument("--dir", type=Path, required=True, help="Discussion directory")

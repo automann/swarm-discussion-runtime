@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm._shared import MESSAGE_ID
+from swarm.quality import validate_quality_block
 
 ALLOWED_RELATIONS = {"supports", "counters", "extends", "questions"}
 COMPLETED_STATUSES = {"completed", "complete", "done"}
@@ -312,6 +313,8 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
                 "shift provenance skipped because personaContextLog is absent",
             )
         )
+
+    errors.extend(validate_quality_block(round_record))
 
     return {
         "ok": not errors,

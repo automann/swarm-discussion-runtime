@@ -13,6 +13,7 @@ from swarm.capabilities import (
     default_profile_path,
     load_jsonl as load_tool_evidence_jsonl,
 )
+from swarm.quality import quality_summary
 from swarm.validation import validate_discussion_dir, validate_round_file
 from swarm.wal import resume_plan
 
@@ -255,18 +256,18 @@ def _events_summary(discussion_dir: Path) -> dict[str, Any]:
 def _quality_summary(discussion_dir: Path) -> dict[str, Any]:
     round_files = sorted((discussion_dir / "rounds").glob("[0-9][0-9][0-9].json"))
     synthesis_present = (discussion_dir / "artifacts" / "synthesis.md").exists()
-    latest_synthesis: dict[str, Any] = {}
+    latest_round: dict[str, Any] = {}
     if round_files:
         payload, _error = _load_json(round_files[-1])
-        if isinstance(payload, dict) and isinstance(payload.get("synthesis"), dict):
-            latest_synthesis = payload["synthesis"]
-    quality_score = latest_synthesis.get("qualityScore")
-    recommendation = latest_synthesis.get("recommendation")
-    return {
-        "synthesisPresent": synthesis_present or bool(latest_synthesis),
-        "qualityScore": quality_score,
-        "recommendation": recommendation,
-    }
+        if isinstance(payload, dict):
+            latest_round = payload
+    latest_synthesis = latest_round.get("synthesis") if isinstance(latest_round.get("synthesis"), dict) else {}
+    manifest, _manifest_error = _load_json(discussion_dir / "manifest.json")
+    block = quality_summary(latest_round, manifest if isinstance(manifest, dict) else {})
+    block["synthesisPresent"] = synthesis_present or bool(latest_synthesis)
+    block["qualityScore"] = latest_synthesis.get("qualityScore")
+    block["recommendation"] = latest_synthesis.get("recommendation")
+    return block
 
 
 def _projection_summary(discussion_dir: Path) -> dict[str, Any]:
