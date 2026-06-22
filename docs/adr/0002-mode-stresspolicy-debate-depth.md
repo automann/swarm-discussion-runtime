@@ -55,6 +55,7 @@ The runtime computes a structural **disagreement signal** at round finalize and 
 // round record + evidence.json
 "quality": {
   "stressPolicy":          "auto" | "required" | "off",
+  "stressRequired":        true,            // runtime pre-synthesis decision (see below)
   "stressTriggered":       true,            // a stress pass actually ran this discussion
   "counterEdgeCount":      2,               // argumentGraph edges with relation counters|questions
   "positionShiftCount":    1,               // entries in positionShifts[]
@@ -65,11 +66,14 @@ The runtime computes a structural **disagreement signal** at round finalize and 
 
 `counterEdgeCount`, `positionShiftCount`, and `stressTriggered` are **computed by the runtime** from the artifacts (argument graph, phases present, `positionShifts`) — they are not adapter self-reports. `genuineDisagreement` and `minorityReportPresent` are LLM/coordinator-produced but must be artifact-backed.
 
-Certification gains an enforceable check keyed off the discussion's declared `stressPolicy` (a `--require-stress` mode, parallel to `--require-projection`):
+**The `auto` trigger must act *before* synthesis (pre-synthesis decision).** A signal computed only at `finalize-round` can *detect* a fan-out but cannot *prevent* one — by then the round is synthesized and committed. So the runtime owns a **pre-synthesis decision primitive** (`stress-check`): after the `argument` phase and before synthesis, the coordinator calls it; it computes the disagreement signal over the argument-phase messages and returns `{ stressRequired, reason, counterEdgeCount }`. `stressRequired` is true when `stressPolicy == required`, or `stressPolicy == auto` and the argument round has no `counters`/`questions` edges. **Both adapters MUST consult it and run a stress pass before they may finalize** — the trigger is computed once, in the runtime, so the hosts cannot drift (each re-implementing the trigger is the exact failure this ADR prevents). The decision is recorded as `quality.stressRequired`, and round messages are **phase-tagged** so certification can re-derive the pre-stress signal over the argument-phase subset alone — a coordinator cannot back-date or hide that stress was required.
 
-- `stressPolicy: required` → fail unless `stressTriggered == true` **and** at least one expert responded to the stress (a `response`-phase message referencing the stress message);
-- `stressPolicy: auto` → fail only if the signal was empty (`counterEdgeCount == 0`) **and** no stress pass was triggered — i.e. the discussion converged with zero engineered disagreement and never noticed;
-- `stressPolicy: off` → no debate-depth assertion (but everything else still gates).
+Certification gains an enforceable `--require-stress` mode (parallel to `--require-projection`):
+
+- **whenever `stressTriggered == true` (any policy):** fail unless at least one `response`-phase message references the stress message (`stress_response_missing`) — a stress step nobody answers does not count;
+- `stressPolicy: required` → additionally fail unless `stressTriggered == true` (`stress_required_not_triggered`);
+- `stressPolicy: auto` → fail if the recorded pre-synthesis decision was `stressRequired == true` and no stress pass ran (`auto_stress_skipped`); validation re-derives the pre-stress signal from the phase-tagged argument messages, so the decision cannot be back-dated;
+- `stressPolicy: off` → no debate-depth assertion (everything else still gates).
 
 This makes "did this actually engineer disagreement?" a machine-checkable property, not a reviewer's impression.
 
@@ -98,9 +102,9 @@ synthesis   Historian separates: argued-consensus / majority-only /
 
 ### D4 — `stressPolicy: auto` is data-driven; rollout is runtime-first
 
-`auto` triggers the stress pass off the runtime signal (D2), so a smooth round self-corrects without the user asking. Because the signal and the contract are runtime-owned, **rollout is runtime-first** (overriding the Codex proposal's adapter-led phase 1 on the *ownership* question — adapters may still move first on *orchestration*, but the contract lands in the runtime, not in one adapter):
+`auto` triggers the stress pass off the runtime's **pre-synthesis** decision (`stress-check`, D2) — computed once in the runtime and consulted by both coordinators *before* they synthesize — so a smooth round self-corrects and the hosts cannot drift. Because the decision, the signal, and the contract are all runtime-owned, **rollout is runtime-first** (overriding the Codex proposal's adapter-led phase 1 on the *ownership* question — adapters may still move first on *orchestration*, but the contract lands in the runtime, not in one adapter):
 
-1. **runtime** computes the signal, records the `quality` block, supports the `position/argument/stress/response` phases in `prompt-build`, and adds the `--require-stress` certification mode + acceptance checks;
+1. **runtime** exposes the pre-synthesis `stress-check` decision primitive, computes the signal, records the `quality` block (incl. `stressRequired`), supports the `position/argument/stress/response` phases in `prompt-build`, and adds the `--require-stress` certification mode + acceptance checks;
 2. **then both adapters** carry `mode` + `stressPolicy` in the parent packet / coordinator contract and orchestrate the phases — building to the **same** runtime contract so Codex and Claude cannot diverge.
 
 ## Consequences
@@ -148,3 +152,11 @@ Execute **runtime-first**; do not re-vendor adapters until the runtime contract 
 - Who runs the stress: reuse the `protocol/PROTOCOL.md` **Contrarian** fixed role (present in `standard`/`deep`), or a coordinator-generated stress prompt for `lightweight` + `auto`? Leaning: Contrarian where the panel includes it, coordinator prompt otherwise.
 - Alias-vs-reject for non-tier `mode` strings (carried from ROADMAP-NEXT parking lot) — accept `"normal"` → `standard`, or reject at `init`?
 - Does `--require-stress` default on for `deep`, or is it always derived from the discussion's declared `stressPolicy`? Leaning: derived from the declared policy, never a separate default.
+
+## Review incorporated (2026-06-22, Codex adversarial review)
+
+A Codex adversarial review of this ADR + `ROADMAP-NEXT.md` + `plans/009` (`--base e4f9f6f`, verdict *needs-attention*) raised three findings, now addressed:
+
+- **[high] `auto` was computed only post-finalize, so it could not trigger the stress pass** — the default `standard → auto` path could still ship a single-pass fan-out, and each adapter would re-derive the trigger (the drift this ADR exists to prevent). Added the **pre-synthesis `stress-check` decision primitive** (D2): the runtime computes `stressRequired` from the argument phase *before* synthesis; both coordinators must consult it and run stress before finalizing. The decision is recorded (`quality.stressRequired`) and re-derivable from phase-tagged messages.
+- **[high] `auto` could pass with a stress phase nobody answered.** Tightened the gate (D2): a `response` referencing the stress message is required **whenever `stressTriggered == true`**, for any policy (`stress_response_missing`) — not only `required`.
+- **[medium] Dropping `projection-manifest.json` from the byte anchor (plan 009 B-1) removed its only freshness check.** Resolved in `plans/009`: the manifest file leaves the byte total (so legitimate post-evidence finalization no longer trips `stale_*`), but a **terminal-cleanup content gate** is added under `--require-projection` (`deletionStatus` enum valid, and `== clean` with empty `remainingPaths` where zero-residue is required) and `deletionStatus` is surfaced in evidence — so a forged or partial-cleanup mutation is still caught.

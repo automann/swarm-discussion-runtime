@@ -163,3 +163,7 @@ with real-run data.)*
   debate" verdict and proposed `stressPolicy` as an orthogonal secondary option.
 - 2026-06-22 — ratified the design as **ADR 0002** (Accepted); `plans/009` to
   implement it, runtime-first.
+- 2026-06-22 — incorporated a Codex adversarial review of ADR 0002 + plan 009
+  (*needs-attention*): added a pre-synthesis `stress-check` decision so `auto` acts
+  *before* synthesis (not post-hoc), required a stress *response* whenever stress is
+  triggered, and replaced B-1's lost manifest freshness with a terminal-cleanup gate.
