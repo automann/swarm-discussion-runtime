@@ -116,3 +116,35 @@ def test_certify_adapter_fails_on_broken_discussion(tmp_path: Path) -> None:
     assert payload["certified"] is False
     failed = {check["name"] for check in payload["checks"] if not check["passed"]}
     assert "adapter-smoke" in failed
+
+
+def test_certify_require_stress_inert_on_no_policy_fixture() -> None:
+    # minimal-v2 declares no stressPolicy -> off -> --require-stress is inert and threads
+    # through certify without breaking certification (plan 009 step 5).
+    payload, returncode = run_json(str(CERTIFY), "--discussion", str(FIXTURE), "--require-stress")
+    assert returncode == 0, payload
+    assert payload["certified"] is True
+    assert payload["requireStress"] is True
+
+
+def test_certify_require_stress_fails_when_policy_unsatisfied(tmp_path: Path) -> None:
+    import shutil
+
+    discussion = tmp_path / "stressreq"
+    shutil.copytree(FIXTURE, discussion)
+    manifest = json.loads((discussion / "manifest.json").read_text())
+    manifest["stressPolicy"] = "required"  # minimal-v2 ran no stress pass
+    (discussion / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    # regenerate trace/evidence so the manifest byte change doesn't trip the stale check
+    rt = str(ROOT / "runtime" / "swarm_rt.py")
+    for command in ("trace", "evidence"):
+        run_json(rt, command, "--dir", str(discussion), "--output", str(discussion / "artifacts" / f"{command}.json"))
+
+    base, base_rc = run_json(str(CERTIFY), "--discussion", str(discussion))
+    assert base_rc == 0 and base["certified"] is True, base  # gate inert without the flag
+
+    payload, returncode = run_json(str(CERTIFY), "--discussion", str(discussion), "--require-stress")
+    assert returncode == 1 and payload["certified"] is False
+    assert payload["requireStress"] is True
+    loop = next(check for check in payload["checks"] if check["name"] == "validate-loop")
+    assert any(error["code"] == "stress_required_not_triggered" for error in loop["errors"])

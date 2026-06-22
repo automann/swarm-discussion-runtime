@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from swarm.quality import (
+    argument_phase_digest,
     disagreement_signal,
     effective_stress_policy,
     quality_summary,
@@ -134,11 +135,14 @@ def test_stress_check_missing_round(tmp_path: Path) -> None:
 # --- step 5: the --require-stress certification gate -------------------------
 
 
-def _disc_with_round(tmp_path: Path, name: str, policy: str, messages, graph=None) -> Path:
+def _disc_with_round(tmp_path: Path, name: str, policy: str, messages, graph=None, quality=None) -> Path:
     d = tmp_path / name
     (d / "rounds").mkdir(parents=True)
     (d / "manifest.json").write_text(json.dumps({"id": "x", "stressPolicy": policy}))
-    (d / "rounds" / "001.json").write_text(json.dumps(_round(messages=messages, graph=graph or [])))
+    record = _round(messages=messages, graph=graph or [])
+    if quality is not None:
+        record["quality"] = quality
+    (d / "rounds" / "001.json").write_text(json.dumps(record))
     return d
 
 
@@ -177,13 +181,36 @@ def test_validate_stress_response_missing(tmp_path: Path) -> None:
     assert "stress_response_missing" in _codes(validate_stress(d, require_stress=True))
 
 
+def test_validate_stress_auto_requires_recorded_decision(tmp_path: Path) -> None:
+    # auto under --require-stress with no persisted pre-synthesis decision is rejected
+    # (a forger can't simply omit the decision).
+    d = _disc_with_round(tmp_path, "nodec", "auto", [{"id": "r1-msg-001", "type": "argument"}])
+    assert "stress_decision_unrecorded" in _codes(validate_stress(d, require_stress=True))
+
+
 def test_validate_stress_auto_skipped(tmp_path: Path) -> None:
-    d = _disc_with_round(tmp_path, "e", "auto", [{"id": "r1-msg-001", "type": "argument"}, {"id": "r1-msg-002", "type": "argument"}])
+    # decision saw 0 challenge edges (stressRequired True) but no stress pass ran.
+    messages = [{"id": "r1-msg-001", "type": "argument"}, {"id": "r1-msg-002", "type": "argument"}]
+    decision = {"stressRequired": True, "argumentDigest": argument_phase_digest({"messages": messages, "argumentGraph": []})}
+    d = _disc_with_round(tmp_path, "e", "auto", messages, quality=decision)
     assert "auto_stress_skipped" in _codes(validate_stress(d, require_stress=True))
 
 
-def test_validate_stress_auto_with_challenge_edge_ok(tmp_path: Path) -> None:
+def test_validate_stress_auto_with_recorded_disagreement_ok(tmp_path: Path) -> None:
+    # decision saw a real argument-phase challenge edge (stressRequired False) -> ok.
     messages = [{"id": "r1-msg-001", "type": "argument"}, {"id": "r1-msg-002", "type": "argument"}]
     graph = [{"from": "r1-msg-002", "to": "r1-msg-001", "relation": "counters"}]
-    d = _disc_with_round(tmp_path, "f", "auto", messages, graph)
+    decision = {"stressRequired": False, "argumentDigest": argument_phase_digest({"messages": messages, "argumentGraph": graph})}
+    d = _disc_with_round(tmp_path, "f", "auto", messages, graph, quality=decision)
     assert validate_stress(d, require_stress=True)["ok"] is True
+
+
+def test_validate_stress_auto_rejects_back_dated_argument_graph(tmp_path: Path) -> None:
+    # the decision saw 0 challenge edges, but the final record injects a counters edge
+    # among argument messages and skips the stress pass -> digest mismatch (finding 1).
+    messages = [{"id": "r1-msg-001", "type": "argument"}, {"id": "r1-msg-002", "type": "argument"}]
+    honest_digest = argument_phase_digest({"messages": messages, "argumentGraph": []})
+    injected = [{"from": "r1-msg-002", "to": "r1-msg-001", "relation": "counters"}]
+    decision = {"stressRequired": False, "argumentDigest": honest_digest}
+    d = _disc_with_round(tmp_path, "backdate", "auto", messages, injected, quality=decision)
+    assert "argument_phase_mutated" in _codes(validate_stress(d, require_stress=True))

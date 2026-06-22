@@ -260,3 +260,21 @@ findings, both fixed (suite 248 → 250):
   it. Fixed: when the effective policy is known (discussion-level validation threads it from
   the manifest), `stressRequired` is recomputed from the policy + pre-stress signal and a
   mismatch is rejected (`quality_stress_required_mismatch`).
+
+## Review incorporated (2026-06-23, Codex review of the steps 4-5 implementation)
+
+A Codex adversarial review of steps 4-5 (`--base 135a05b`, *needs-attention*) raised three
+findings, all fixed (suite 257 → 259+):
+
+- **[high] `auto` was forgeable by back-dating the final argument graph** — `validate_stress`
+  re-derived the pre-stress signal from the mutable final record. Fixed: `stress-check` now
+  emits an `argumentDigest`; the coordinator persists the decision (`stressRequired` +
+  `argumentDigest`); `validate_stress` requires it for `auto` (`stress_decision_unrecorded`),
+  rejects a digest mismatch (`argument_phase_mutated`), and honors the persisted decision.
+- **[high] a response could be forged with a bare graph edge** — `_stress_has_response` now
+  requires the `response` message's OWN `references` to cite the `stress_test` id.
+- **[medium] `--require-stress` was undocumented** — added to `docs/ADAPTER-SPEC.md`
+  Certification (what it proves / does not prove) + certify-level integration tests.
+
+Residual (host truth, ADR 0002 R2): the runtime proves *structural* disagreement; a fully
+self-consistent forged artifact is caught only by the retained real-host smoke.

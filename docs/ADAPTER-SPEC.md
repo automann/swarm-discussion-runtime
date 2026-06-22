@@ -137,6 +137,21 @@ REAL host-driven discussion passes `adapter-smoke`, `validate-loop`, and
 proves the adapter. Re-certify on every runtime re-vendor and before every
 adapter release.
 
+**v0.3.x release modes** (additive flags; certify with these for a v0.3.x release):
+
+- `--require-projection` (ADR 0001 D4) — fail unless the discussion declares projected
+  custom agents with consistent, run-scoped provenance and a clean projection manifest.
+- `--require-stress` (ADR 0002 D2) — fail unless the discussion satisfies its declared
+  `stressPolicy`: a stress pass that ran must be answered by a `response` that cites it
+  in its own `references` (`stress_response_missing`); `required` must run a stress pass
+  (`stress_required_not_triggered`); `auto` must carry a durable pre-synthesis decision
+  from `stress-check` and run a stress pass when it required one
+  (`stress_decision_unrecorded` / `argument_phase_mutated` / `auto_stress_skipped`); `off`
+  (or no declared policy) makes no debate-depth assertion. **Proves** structural
+  disagreement — counter/questions edges, a real stress pass with a citing response, and
+  an argument phase that was not back-dated. **Does not prove** that the disagreement was
+  *substantive*; that is host truth, shown only by the retained real-host smoke (ADR 0002 R2).
+
 ## Dynamic custom-agent provenance (v0.3.0, additive)
 
 The transport artifacts carry host-agnostic provenance for dynamically-projected

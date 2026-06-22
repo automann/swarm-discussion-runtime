@@ -13,6 +13,7 @@ mismatch (``quality_signal_mismatch``). The produced fields (``genuineDisagreeme
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -73,6 +74,32 @@ def disagreement_signal(round_record: dict[str, Any], *, pre_stress: bool = Fals
     }
 
 
+def argument_phase_digest(round_record: Any) -> str:
+    """Stable hash of the argument-phase message ids + the edges among them.
+
+    The coordinator persists this at stress-check time so the pre-synthesis ``auto``
+    decision cannot be back-dated by inserting a challenge edge into the argument graph
+    before finalize: ``validate_stress`` recomputes it from the final record and rejects
+    a mismatch (``argument_phase_mutated``).
+    """
+    record = round_record if isinstance(round_record, dict) else {}
+    messages = record.get("messages") if isinstance(record.get("messages"), list) else []
+    arg_ids = sorted(
+        m.get("id")
+        for m in messages
+        if isinstance(m, dict) and m.get("type") in _ARGUMENT_PHASE_TYPES and isinstance(m.get("id"), str)
+    )
+    arg_id_set = set(arg_ids)
+    graph = record.get("argumentGraph") if isinstance(record.get("argumentGraph"), list) else []
+    edges = sorted(
+        [e.get("from"), e.get("to"), e.get("relation")]
+        for e in graph
+        if isinstance(e, dict) and e.get("from") in arg_id_set and e.get("to") in arg_id_set
+    )
+    payload = json.dumps({"messages": arg_ids, "edges": edges}, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def effective_stress_policy(manifest: Any) -> str:
     """The effective policy for a discussion; absence is ``off`` (legacy/back-compat)."""
     policy = manifest.get("stressPolicy") if isinstance(manifest, dict) else None
@@ -125,12 +152,14 @@ def build_round_quality(round_record: Any, manifest: Any) -> dict[str, Any]:
     pre_stress = disagreement_signal(record, pre_stress=True)["counterEdgeCount"]
     block: dict[str, Any] = {
         "stressPolicy": policy,
-        "stressRequired": stress_required(policy, pre_stress),
+        # stressRequired is the persisted pre-synthesis decision (authoritative); fall
+        # back to a finalize-time computation only when the coordinator recorded none.
+        "stressRequired": stored["stressRequired"] if isinstance(stored.get("stressRequired"), bool) else stress_required(policy, pre_stress),
         "stressTriggered": signal["stressTriggered"],
         "counterEdgeCount": signal["counterEdgeCount"],
         "positionShiftCount": signal["positionShiftCount"],
     }
-    for field in ("genuineDisagreement", "minorityReportPresent"):
+    for field in ("genuineDisagreement", "minorityReportPresent", "argumentDigest"):
         if field in stored:
             block[field] = stored[field]
     return block
@@ -247,21 +276,21 @@ def stress_check(discussion_dir: Path, round_id: int | None = None) -> dict[str,
         "stressPolicy": policy,
         "counterEdgeCount": counter,
         "stressRequired": required,
+        "argumentDigest": argument_phase_digest(record),
         "reason": reason,
     }
 
 
 def _stress_has_response(record: dict[str, Any]) -> bool:
-    """True if a response message references a stress_test message in this round."""
+    """True if a ``type=response`` message cites a ``stress_test`` message in its OWN
+    ``references``. A bare argumentGraph edge is not enough (review finding 2): graph
+    endpoints only have to resolve, so an edge can be synthesized without a real answer.
+    """
     messages = record.get("messages") if isinstance(record, dict) else None
     messages = messages if isinstance(messages, list) else []
     stress_ids = {m.get("id") for m in messages if isinstance(m, dict) and m.get("type") == "stress_test"}
     if not stress_ids:
         return False
-    response_ids = {m.get("id") for m in messages if isinstance(m, dict) and m.get("type") == "response"}
-    for edge in record.get("argumentGraph") or []:
-        if isinstance(edge, dict) and edge.get("from") in response_ids and edge.get("to") in stress_ids:
-            return True
     for message in messages:
         if isinstance(message, dict) and message.get("type") == "response":
             for ref in message.get("references") or []:
@@ -298,7 +327,17 @@ def validate_stress(discussion_dir: Path, require_stress: bool = False) -> dict[
             if policy == "required" and not triggered:
                 errors.append(_issue("stress_required_not_triggered", where, "stressPolicy=required but this round ran no stress pass"))
             if policy == "auto":
-                pre = disagreement_signal(record, pre_stress=True)["counterEdgeCount"]
-                if stress_required("auto", pre) and not triggered:
-                    errors.append(_issue("auto_stress_skipped", where, "stressPolicy=auto: argument round had no challenge edges but no stress pass ran"))
+                # auto is data-driven, so the authority is the PERSISTED pre-synthesis
+                # decision, not a re-derivation from the (mutable) final record: require
+                # it, reject argument-graph back-dating via the digest, and honor it.
+                quality = record.get("quality") if isinstance(record.get("quality"), dict) else {}
+                persisted_required = quality.get("stressRequired")
+                persisted_digest = quality.get("argumentDigest")
+                if not isinstance(persisted_required, bool) or not isinstance(persisted_digest, str):
+                    errors.append(_issue("stress_decision_unrecorded", where, "stressPolicy=auto requires a persisted pre-synthesis decision (quality.stressRequired + quality.argumentDigest from stress-check)"))
+                else:
+                    if persisted_digest != argument_phase_digest(record):
+                        errors.append(_issue("argument_phase_mutated", where, "argument phase changed after the pre-synthesis stress-check decision (argumentDigest mismatch): the auto decision was back-dated"))
+                    if persisted_required and not triggered:
+                        errors.append(_issue("auto_stress_skipped", where, "stressPolicy=auto: the pre-synthesis decision required a stress pass but none ran"))
     return {"ok": not errors, "errors": errors, "summary": {"stressPolicy": policy, "rounds": len(round_files)}}
