@@ -9,7 +9,6 @@
       "fixtures/e2e/projected-minimal-v2/events.jsonl",
       "fixtures/e2e/projected-minimal-v2/manifest.json",
       "fixtures/e2e/projected-minimal-v2/progress.md",
-      "fixtures/e2e/projected-minimal-v2/projection-manifest.json",
       "fixtures/e2e/projected-minimal-v2/prompts/r001/response/architect/prompt-build.json",
       "fixtures/e2e/projected-minimal-v2/prompts/r001/response/architect/prompt.txt",
       "fixtures/e2e/projected-minimal-v2/prompts/r001/response/architect/request.json",
@@ -23,7 +22,7 @@
       "fixtures/e2e/projected-minimal-v2/transport/r001/response/wait-batches.jsonl"
     ],
     "root": "fixtures/e2e/projected-minimal-v2",
-    "totalBytes": 12864
+    "totalBytes": 12319
   },
   "capabilities": {
     "effective": {
@@ -101,11 +100,11 @@
     "status": "completed",
     "title": "Minimal v2 discussion loop"
   },
-  "generatedAt": "2026-06-21T13:43:12Z",
+  "generatedAt": "2026-06-22T15:20:19Z",
   "kind": "swarm.discussion_evidence",
   "metrics": {
-    "artifactCount": 20,
-    "artifactTotalBytes": 12864,
+    "artifactCount": 19,
+    "artifactTotalBytes": 12319,
     "citableToolEvidenceCount": 1,
     "collectResultCount": 1,
     "eventCount": 2,
@@ -128,6 +127,14 @@
     },
     "reason": "discussion completed",
     "result": "completed"
+  },
+  "projection": {
+    "createdCount": 2,
+    "deletionStatus": "clean",
+    "present": true,
+    "remainingCount": 0,
+    "removedCount": 2,
+    "runId": "projmin1"
   },
   "prompts": {
     "personas": {

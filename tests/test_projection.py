@@ -14,6 +14,7 @@ from pathlib import Path
 
 import jsonschema
 
+from swarm.audit import build_evidence
 from swarm.loop import validate_minimal_loop
 from swarm.projection import validate_projection
 from swarm.smoke import adapter_smoke
@@ -184,3 +185,47 @@ def test_descriptor_sha_must_match_manifest(tmp_path: Path) -> None:
     codes = _codes(validate_projection(d))
     assert "projection_manifest_mismatch" in codes
     assert "invalid_projected_sha" not in codes  # the sha is well-formed; only the binding is wrong
+
+
+# --- plan 009 B-1: manifest off the byte anchor, freshness via the cleanup gate ---
+
+
+def test_manifest_finalization_does_not_shift_byte_anchor(tmp_path: Path) -> None:
+    # The parent finalizes projection-manifest.json (pending -> clean, + removed/
+    # remaining) AFTER the coordinator builds evidence. That legitimate growth must
+    # not move artifactTotalBytes, or --require-projection trips a false stale check.
+    d = _copy(tmp_path)
+    full = _load(d / "projection-manifest.json")
+    _dump(
+        d / "projection-manifest.json",
+        {"runId": full["runId"], "createdPaths": full["createdPaths"], "deletionStatus": "pending"},
+    )
+    before = build_evidence(d)["metrics"]["artifactTotalBytes"]
+    _dump(d / "projection-manifest.json", full)  # clean + removedPaths + remainingPaths
+    after = build_evidence(d)["metrics"]["artifactTotalBytes"]
+    assert after == before
+
+
+def test_terminal_cleanup_gate_requires_clean(tmp_path: Path) -> None:
+    d = _copy(tmp_path)
+    manifest = _load(d / "projection-manifest.json")
+    manifest["deletionStatus"] = "pending"
+    _dump(d / "projection-manifest.json", manifest)
+    assert validate_projection(d)["ok"] is True  # inert without the flag
+    assert "projection_cleanup_incomplete" in _codes(validate_projection(d, require_projection=True))
+
+
+def test_terminal_cleanup_gate_rejects_residue(tmp_path: Path) -> None:
+    d = _copy(tmp_path)
+    manifest = _load(d / "projection-manifest.json")
+    manifest["remainingPaths"] = [".codex/agents/swarm-projmin1-architect.toml"]
+    _dump(d / "projection-manifest.json", manifest)
+    assert "projection_residue_present" in _codes(validate_projection(d, require_projection=True))
+
+
+def test_invalid_deletion_status_rejected(tmp_path: Path) -> None:
+    d = _copy(tmp_path)
+    manifest = _load(d / "projection-manifest.json")
+    manifest["deletionStatus"] = "bogus"
+    _dump(d / "projection-manifest.json", manifest)
+    assert "invalid_deletion_status" in _codes(validate_projection(d))

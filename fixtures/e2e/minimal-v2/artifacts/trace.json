@@ -132,6 +132,9 @@
     "reason": "discussion completed"
   },
   "ok": true,
+  "projection": {
+    "present": false
+  },
   "prompts": {
     "count": 2,
     "errors": [],

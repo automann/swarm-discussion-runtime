@@ -100,7 +100,7 @@
     "status": "completed",
     "title": "Minimal v2 discussion loop"
   },
-  "generatedAt": "2026-06-18T18:57:54Z",
+  "generatedAt": "2026-06-22T15:20:19Z",
   "kind": "swarm.discussion_evidence",
   "metrics": {
     "artifactCount": 19,
@@ -127,6 +127,9 @@
     },
     "reason": "discussion completed",
     "result": "completed"
+  },
+  "projection": {
+    "present": false
   },
   "prompts": {
     "personas": {
