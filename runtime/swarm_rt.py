@@ -230,7 +230,7 @@ def cmd_finalize_round(args: argparse.Namespace) -> int:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
-    result = init_discussion(args.dir, args.discussion_id, mode=args.mode, title=args.title)
+    result = init_discussion(args.dir, args.discussion_id, mode=args.mode, title=args.title, stress_policy=args.stress_policy)
     summary = {
         "ok": result["ok"],
         "manifestPath": result.get("manifestPath"),
@@ -467,6 +467,12 @@ def build_parser() -> argparse.ArgumentParser:
     init_p.add_argument("--dir", type=Path, required=True, help="Discussion directory")
     init_p.add_argument("--discussion-id", required=True, help="Discussion id")
     init_p.add_argument("--mode", default="standard", help="Discussion mode")
+    init_p.add_argument(
+        "--stress-policy",
+        choices=["auto", "required", "off"],
+        default=None,
+        help="Stress policy (default derived from mode: lightweight=off, standard=auto, deep=required)",
+    )
     init_p.add_argument("--title", help="Optional discussion title")
     init_p.set_defaults(func=cmd_init)
 

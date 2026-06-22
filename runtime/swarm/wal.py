@@ -342,8 +342,21 @@ def append_message(
     }
 
 
+_STRESS_POLICIES = frozenset({"auto", "required", "off"})
+_MODE_DEFAULT_STRESS = {"lightweight": "off", "standard": "auto", "deep": "required"}
+
+
+def _default_stress_policy(mode: str) -> str:
+    """Default stressPolicy for a mode tier; non-tier modes get 'off' (back-compat)."""
+    return _MODE_DEFAULT_STRESS.get(mode, "off")
+
+
 def init_discussion(
-    discussion_dir: Path, discussion_id: str, mode: str = "standard", title: str | None = None
+    discussion_dir: Path,
+    discussion_id: str,
+    mode: str = "standard",
+    title: str | None = None,
+    stress_policy: str | None = None,
 ) -> dict[str, Any]:
     """Scaffold a discussion directory and its manifest. Fail loud if it exists."""
     if not isinstance(discussion_id, str) or not re.match(r"^[A-Za-z0-9][A-Za-z0-9_-]*\Z", discussion_id):
@@ -352,6 +365,11 @@ def init_discussion(
             "errors": [
                 _issue("invalid_discussion_id", "discussionId", "must match ^[A-Za-z0-9][A-Za-z0-9_-]*$", discussion_id)
             ],
+        }
+    if isinstance(stress_policy, str) and stress_policy.strip() and stress_policy not in _STRESS_POLICIES:
+        return {
+            "ok": False,
+            "errors": [_issue("invalid_stress_policy", "stressPolicy", "must be one of auto|required|off", stress_policy)],
         }
     manifest_path = discussion_dir / "manifest.json"
     if manifest_path.exists():
@@ -362,10 +380,16 @@ def init_discussion(
     for sub in ("context", "rounds", "artifacts"):
         (discussion_dir / sub).mkdir(parents=True, exist_ok=True)
     resolved_mode = mode if isinstance(mode, str) and mode.strip() else "standard"
+    resolved_stress_policy = (
+        stress_policy
+        if isinstance(stress_policy, str) and stress_policy in _STRESS_POLICIES
+        else _default_stress_policy(resolved_mode)
+    )
     manifest = {
         "schemaVersion": 1,
         "id": discussion_id,
         "mode": resolved_mode,
+        "stressPolicy": resolved_stress_policy,
         "status": "active",
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
@@ -379,13 +403,18 @@ def init_discussion(
         os.fsync(handle.fileno())
     os.replace(tmp_path, manifest_path)
     _fsync_dir(discussion_dir)
-    event = append_event(discussion_dir, "discussion_initialized", {"discussionId": discussion_id, "mode": resolved_mode})
+    event = append_event(
+        discussion_dir,
+        "discussion_initialized",
+        {"discussionId": discussion_id, "mode": resolved_mode, "stressPolicy": resolved_stress_policy},
+    )
     return {
         "ok": True,
         "errors": [],
         "manifestPath": str(manifest_path),
         "discussionId": discussion_id,
         "mode": resolved_mode,
+        "stressPolicy": resolved_stress_policy,
         "nextHelperCommand": "swarm-rt context-build --brief <brief.json> --out context/summary.md",
         "event": event,
     }

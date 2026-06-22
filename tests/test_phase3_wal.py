@@ -450,3 +450,26 @@ def test_init_discussion_rejects_bad_id(tmp_path: Path) -> None:
 
     assert result["ok"] is False
     assert result["errors"][0]["code"] == "invalid_discussion_id"
+
+
+def test_init_discussion_stress_policy_derives_from_mode(tmp_path: Path) -> None:
+    from swarm.wal import init_discussion
+
+    for mode, expected in (("lightweight", "off"), ("standard", "auto"), ("deep", "required"), ("normal", "off")):
+        result = init_discussion(tmp_path / mode, "demo-1", mode=mode)
+        assert result["ok"] is True, result
+        assert read_json(tmp_path / mode / "manifest.json")["stressPolicy"] == expected
+        assert result["stressPolicy"] == expected
+
+
+def test_init_discussion_stress_policy_explicit_and_invalid(tmp_path: Path) -> None:
+    from swarm.wal import init_discussion
+
+    override = init_discussion(tmp_path / "a", "demo-1", mode="standard", stress_policy="required")
+    assert override["ok"] is True
+    assert read_json(tmp_path / "a" / "manifest.json")["stressPolicy"] == "required"
+
+    bad = init_discussion(tmp_path / "b", "demo-1", stress_policy="bogus")
+    assert bad["ok"] is False
+    assert bad["errors"][0]["code"] == "invalid_stress_policy"
+    assert not (tmp_path / "b").exists()  # no partial scaffold on invalid input
