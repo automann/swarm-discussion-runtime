@@ -28,6 +28,7 @@ a numbered plan here before implementation.
 | 006 | Consolidate duplicated private helpers into `swarm/_shared.py` | P3 | S/M | 001–004 (ordering) | DONE (MESSAGE_ID + fsync_dir; _issue/_load_json dedup deferred) |
 | 007 | Runtime-owned `agentDescriptor` provenance for projected custom agents | P1 | M | — | DONE (v0.3.0; ADR 0001) |
 | 008 | Certify projected custom-agent fan-out (gate + fixture + topology docs) | P1 | M | 007 | DONE (v0.3.0; ADR 0001) |
+| 009 | `mode` × `stressPolicy`: disagreement signal + quality contract + `--require-stress` | P1 | M/L | 008; ADR 0002 | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -67,6 +68,14 @@ Adapter work (`swarm-discussion-claude`, `swarm-discussion-codex`) and the
 aggregator pin bumps follow only after both land and a runtime commit is cut for
 vendoring. Baseline for these plans is the current `.venv/bin/python -m pytest -q`
 suite, not the 167 figure above.
+
+## Update 2026-06-22 — 0.4.x debate depth (ADR 0002)
+
+Plan 009 opens the **0.4.x** line per `docs/adr/0002-mode-stresspolicy-debate-depth.md`:
+a runtime-owned discussion-quality contract (`mode` × `stressPolicy`) that makes
+engineered disagreement certifiable (`--require-stress`). Runtime-first; it also folds
+in ROADMAP-NEXT B-1 (the projection-manifest byte-total fix). Adapter orchestration of
+the debate phases follows after it lands. See `../ROADMAP-NEXT.md`.
 
 ## Intent-alignment context (why these six)
 

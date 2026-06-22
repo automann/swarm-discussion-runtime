@@ -77,7 +77,7 @@ runtime/swarm_rt.py       minimal CLI entrypoint
 runtime/swarm/            runtime package skeleton
 scripts/vendor.py         pinned-SHA vendoring into adapter repos
 conformance/              adapter certification kit
-plans/                    landed implementation plans (001-008)
+plans/                    implementation plans (001-008 landed; 009 planned)
 tests/                    contract and smoke tests
 fixtures/                 phase fixtures, minimal-v2 e2e anchor, real legacy
                           discussions under fixtures/legacy/
