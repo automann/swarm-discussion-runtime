@@ -165,8 +165,13 @@ def validate_projection(discussion_dir: Path, require_projection: bool = False) 
                 if require_projection:
                     if deletion_status != "clean":
                         errors.append(_issue("projection_cleanup_incomplete", f"{manifest_path}:deletionStatus", "a certified projected discussion must record deletionStatus 'clean'", deletion_status))
-                    remaining = manifest.get("remainingPaths") or []
-                    if remaining:
+                    # remainingPaths is the field that replaces the removed byte-anchor
+                    # freshness check, so absence/wrong-type is NOT zero residue: it must
+                    # positively record [] (present + list + empty).
+                    remaining = manifest.get("remainingPaths")
+                    if not isinstance(remaining, list):
+                        errors.append(_issue("projection_residue_unrecorded", f"{manifest_path}:remainingPaths", "a certified projected discussion must record remainingPaths as a list (zero residue unverified)", remaining))
+                    elif remaining:
                         errors.append(_issue("projection_residue_present", f"{manifest_path}:remainingPaths", "a certified projected discussion must have empty remainingPaths (zero residue)", remaining))
                 created = {
                     entry.get("path"): entry.get("sha256")

@@ -229,3 +229,39 @@ def test_invalid_deletion_status_rejected(tmp_path: Path) -> None:
     manifest["deletionStatus"] = "bogus"
     _dump(d / "projection-manifest.json", manifest)
     assert "invalid_deletion_status" in _codes(validate_projection(d))
+
+
+# --- Codex review of the step 1-2 implementation (2026-06-23) ----------------
+
+
+def test_stale_projection_in_committed_evidence_is_caught(tmp_path: Path) -> None:
+    # The byte total no longer anchors the manifest, so the cleanup state must be
+    # freshness-checked: committed evidence that lies about deletionStatus while the
+    # live manifest is clean must trip the stale check (finding 1).
+    d = _copy(tmp_path)
+    ev = _load(d / "artifacts" / "evidence.json")
+    ev["projection"]["deletionStatus"] = "pending"  # manifest on disk is still clean
+    _dump(d / "artifacts" / "evidence.json", ev)
+    assert "stale_evidence_artifact" in _codes(validate_minimal_loop(d))
+
+
+def test_terminal_cleanup_requires_remaining_paths_recorded(tmp_path: Path) -> None:
+    # Absence or a non-list remainingPaths is NOT zero residue under certification (finding 2).
+    d = _copy(tmp_path)
+    manifest = _load(d / "projection-manifest.json")
+    manifest.pop("remainingPaths", None)
+    _dump(d / "projection-manifest.json", manifest)
+    assert "projection_residue_unrecorded" in _codes(validate_projection(d, require_projection=True))
+
+    manifest["remainingPaths"] = {}  # wrong type, not a list
+    _dump(d / "projection-manifest.json", manifest)
+    assert "projection_residue_unrecorded" in _codes(validate_projection(d, require_projection=True))
+
+
+def test_persisted_invalid_stress_policy_rejected(tmp_path: Path) -> None:
+    # validate-discussion (not just init) must enforce the manifest stressPolicy enum (finding 3).
+    d = _copy(tmp_path)
+    manifest = _load(d / "manifest.json")
+    manifest["stressPolicy"] = "bogus"
+    _dump(d / "manifest.json", manifest)
+    assert "invalid_stress_policy" in _codes(validate_discussion_dir(d))

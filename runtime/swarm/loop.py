@@ -76,6 +76,9 @@ def _trace_stable(trace: dict[str, Any]) -> dict[str, Any]:
         "health": trace.get("health"),
         "nextAction": trace.get("nextAction"),
         "artifactTotalBytes": (trace.get("artifacts") or {}).get("totalBytes"),
+        # projection-manifest.json is off the byte total (plan 009 B-1), so freshness-check
+        # the cleanup state here instead: stale committed cleanup status -> stale_*_artifact.
+        "projection": trace.get("projection"),
     }
 
 
@@ -88,6 +91,7 @@ def _evidence_stable(evidence: dict[str, Any]) -> dict[str, Any]:
         "artifactTotalBytes": (evidence.get("metrics") or {}).get("artifactTotalBytes"),
         "health": trace.get("health"),
         "nextAction": trace.get("nextAction"),
+        "projection": evidence.get("projection"),
     }
 
 

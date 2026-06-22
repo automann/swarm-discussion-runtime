@@ -404,6 +404,15 @@ def validate_discussion_dir(path: Path) -> dict[str, Any]:
     if status is not None and not isinstance(status, str):
         errors.append(_issue("invalid_status", "manifest.json:status", "manifest status must be a string", status))
         status = None
+
+    # Validate the persisted stressPolicy enum (plan 009): absence is legacy/off, but a
+    # present value on an adapter-produced manifest must be a valid policy. init validates
+    # its own input, but validate-discussion is what certifies persisted manifests.
+    stress_policy = manifest.get("stressPolicy") if isinstance(manifest, dict) else None
+    if stress_policy is not None and (not isinstance(stress_policy, str) or stress_policy not in {"auto", "required", "off"}):
+        errors.append(
+            _issue("invalid_stress_policy", "manifest.json:stressPolicy", "manifest stressPolicy must be one of auto|required|off", stress_policy)
+        )
     if status in COMPLETED_STATUSES:
         if partial_files:
             errors.append(

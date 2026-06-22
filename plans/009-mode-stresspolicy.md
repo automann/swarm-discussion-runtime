@@ -47,9 +47,13 @@ in the same evidence path this plan extends, so fix it first (Step 1).
    (review finding 3), so add a **replacement invariant** under `--require-projection`:
    a **terminal-cleanup content gate** in the projection validator — `deletionStatus`
    must be a valid enum value, and where zero-residue is required (a completed certified
-   discussion) `deletionStatus == clean` **and** `remainingPaths == []`; surface
-   `deletionStatus` in `evidence.json` so cleanup state stays visible to audit. The
-   immutable fields (`runId`, `createdPaths` + sha256) keep their existing gate.
+   discussion) `deletionStatus == clean` **and** a *positively recorded* `remainingPaths
+   == []` (present + list; absence/wrong-type is `projection_residue_unrecorded`, not zero
+   residue). Surface the projection cleanup state in trace/evidence **and freshness-check
+   it** in the stale comparison (`_trace_stable`/`_evidence_stable`), so committed evidence
+   that lies about cleanup trips `stale_*_artifact` — which means the flow must regenerate
+   trace/evidence *after* the parent finalizes cleanup. The immutable fields (`runId`,
+   `createdPaths` + sha256) keep their existing gate.
    **Verify**: a real parent-finalized run no longer emits
    `stale_evidence_artifact`/`stale_trace_artifact` from manifest finalization, **and**
    a manifest flipped to `clean` with a non-empty `remainingPaths` (or an invalid
@@ -221,3 +225,19 @@ and raised three findings, folded in above:
   *file* from the byte total but add a terminal-cleanup content gate (`deletionStatus`
   enum + `clean`/empty `remainingPaths`) and surface `deletionStatus` in evidence; Step 7
   adds the forged-cleanup negative test.
+
+## Review incorporated (2026-06-23, Codex review of the step 1-2 implementation)
+
+A Codex adversarial review of the landed step 1-2 code (`--base b62b64a`, *needs-attention*)
+raised three findings, all fixed (suite 235 → 238):
+
+- **[high] Committed evidence could lie about cleanup state while certification passed.**
+  The `projection` summary was surfaced but never freshness-checked. Fixed: `projection`
+  is now part of `_trace_stable`/`_evidence_stable`, so a committed cleanup state that
+  disagrees with the live manifest trips `stale_*_artifact` (the flow must regenerate
+  evidence after cleanup; this is why the step-1 wording above changed surface → check).
+- **[high] The cleanup gate accepted missing/malformed `remainingPaths` as zero residue.**
+  Fixed: under `--require-projection`, `remainingPaths` must be present + a list + `[]`
+  (`projection_residue_unrecorded` otherwise).
+- **[medium] Persisted `stressPolicy` was validated only at `init`.** Fixed:
+  `validate-discussion` now enforces the enum on persisted manifests (`invalid_stress_policy`).
