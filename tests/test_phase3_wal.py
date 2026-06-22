@@ -119,6 +119,26 @@ def test_append_message_rejects_finalized_round_without_partial(tmp_path: Path) 
     assert any(error["code"] == "round_finalized" for error in result["errors"])
 
 
+def test_finalize_round_persists_runtime_quality_block(tmp_path: Path) -> None:
+    # plan 009 step 3: finalize-round must PERSIST the runtime-owned quality block on the
+    # round (committed, tamper-evident state) with the structural fields + the
+    # manifest-derived stressRequired, not leave it to a trace/evidence rebuild.
+    from swarm.wal import init_discussion
+
+    discussion = tmp_path / "disc"
+    init_discussion(discussion, "demo-1", mode="deep")  # deep -> stressPolicy required
+    messages = [{**message("architect", "Use event sourcing."), "id": "r1-msg-001"}]
+    result = finalize_round(discussion, 1, valid_round_state(messages, {"recommendation": "x"}))
+
+    assert result["ok"] is True, result
+    quality = read_json(discussion / "rounds" / "001.json")["quality"]
+    assert quality["stressPolicy"] == "required"  # read from the manifest (mode=deep)
+    assert quality["stressRequired"] is True
+    assert quality["stressTriggered"] is False
+    assert quality["counterEdgeCount"] == 0
+    assert quality["positionShiftCount"] == 0
+
+
 def test_finalize_round_flushes_final_state_before_commit(tmp_path: Path) -> None:
     discussion = tmp_path / "discussion"
     append_message(discussion, 1, "declarations", message("architect", "Use formatter."))

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm._shared import MESSAGE_ID, fsync_dir as _fsync_dir
+from swarm.quality import build_round_quality
 from swarm.validation import ALLOWED_RELATIONS, validate_round_record
 
 
@@ -448,12 +449,24 @@ def _derive_round_metadata(final_state: dict[str, Any]) -> dict[str, Any]:
     return derived
 
 
+def _load_manifest(discussion_dir: Path) -> dict[str, Any] | None:
+    try:
+        manifest = json.loads((discussion_dir / "manifest.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    return manifest if isinstance(manifest, dict) else None
+
+
 def finalize_round(discussion_dir: Path, round_id: int, final_state: dict[str, Any]) -> dict[str, Any]:
     guard_errors = _round_guard(discussion_dir, round_id, final_state)
     if guard_errors:
         return {"ok": False, "errors": guard_errors}
 
     final_state = _derive_round_metadata(final_state)
+    # Persist the runtime-owned quality block on the round (plan 009 step 3): the
+    # structural fields + stressRequired are authoritative, so the quality contract is
+    # committed, tamper-evident state rather than a transient trace/evidence rebuild.
+    final_state["quality"] = build_round_quality(final_state, _load_manifest(discussion_dir))
     validation = validate_round_record(final_state)
     if not validation["ok"]:
         return {"ok": False, "errors": validation["errors"], "warnings": validation["warnings"]}

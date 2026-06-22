@@ -241,3 +241,18 @@ raised three findings, all fixed (suite 235 → 238):
   (`projection_residue_unrecorded` otherwise).
 - **[medium] Persisted `stressPolicy` was validated only at `init`.** Fixed:
   `validate-discussion` now enforces the enum on persisted manifests (`invalid_stress_policy`).
+
+## Review incorporated (2026-06-23, Codex review of the step 3 implementation)
+
+A Codex adversarial review of step 3 (`--base 88ce53b`, *needs-attention*) raised two
+findings, both fixed (suite 248 → 250):
+
+- **[high] finalize-round didn't persist the quality block** — it was a trace/evidence
+  rebuild, and a missing block was valid, so an adapter could finalize with no quality
+  contract. Fixed: `finalize_round` computes `build_round_quality(...)` from the manifest +
+  round and writes it onto `rounds/NNN.json` (structural fields + `stressRequired`
+  authoritative); a regression test asserts the persisted block.
+- **[high] `stressRequired` was a self-report** — `validate_quality_block` only type-checked
+  it. Fixed: when the effective policy is known (discussion-level validation threads it from
+  the manifest), `stressRequired` is recomputed from the policy + pre-stress signal and a
+  mismatch is rejected (`quality_stress_required_mismatch`).

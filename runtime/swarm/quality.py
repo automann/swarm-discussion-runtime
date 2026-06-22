@@ -110,7 +110,33 @@ def quality_summary(round_record: Any, manifest: Any) -> dict[str, Any]:
     }
 
 
-def validate_quality_block(round_record: Any) -> list[dict[str, Any]]:
+def build_round_quality(round_record: Any, manifest: Any) -> dict[str, Any]:
+    """The runtime-authoritative quality block to PERSIST on a finalized round.
+
+    Structural fields AND ``stressRequired`` are computed by the runtime (overwriting
+    any caller-supplied values); the produced fields (``genuineDisagreement``,
+    ``minorityReportPresent``) pass through. This is what finalize-round writes, so the
+    quality contract is committed, tamper-evident state rather than a transient rebuild.
+    """
+    record = round_record if isinstance(round_record, dict) else {}
+    stored = record.get("quality") if isinstance(record.get("quality"), dict) else {}
+    signal = disagreement_signal(record)
+    policy = effective_stress_policy(manifest)
+    pre_stress = disagreement_signal(record, pre_stress=True)["counterEdgeCount"]
+    block: dict[str, Any] = {
+        "stressPolicy": policy,
+        "stressRequired": stress_required(policy, pre_stress),
+        "stressTriggered": signal["stressTriggered"],
+        "counterEdgeCount": signal["counterEdgeCount"],
+        "positionShiftCount": signal["positionShiftCount"],
+    }
+    for field in ("genuineDisagreement", "minorityReportPresent"):
+        if field in stored:
+            block[field] = stored[field]
+    return block
+
+
+def validate_quality_block(round_record: Any, effective_policy: str | None = None) -> list[dict[str, Any]]:
     """Recompute the structural signal and reject a stored block that disagrees.
 
     Inert when the round stores no ``quality`` block. The structural fields are
@@ -143,6 +169,20 @@ def validate_quality_block(round_record: Any) -> list[dict[str, Any]]:
     for field in ("stressRequired", "minorityReportPresent"):
         if field in quality and not isinstance(quality[field], bool):
             errors.append(_issue("invalid_quality_block", f"quality.{field}", f"{field} must be a boolean", quality[field]))
+    # stressRequired is the load-bearing pre-synthesis decision, not a self-report: when
+    # the effective policy is known (discussion-level validation has the manifest),
+    # recompute it from the policy + pre-stress signal and reject a forged value.
+    if effective_policy is not None and isinstance(quality.get("stressRequired"), bool):
+        expected = stress_required(effective_policy, disagreement_signal(round_record, pre_stress=True)["counterEdgeCount"])
+        if quality["stressRequired"] != expected:
+            errors.append(
+                _issue(
+                    "quality_stress_required_mismatch",
+                    "quality.stressRequired",
+                    "stored stressRequired disagrees with the runtime decision for the effective policy + pre-stress signal",
+                    {"stored": quality["stressRequired"], "expected": expected, "stressPolicy": effective_policy},
+                )
+            )
     return errors
 
 

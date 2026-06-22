@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm._shared import MESSAGE_ID
-from swarm.quality import validate_quality_block
+from swarm.quality import effective_stress_policy, validate_quality_block
 
 ALLOWED_RELATIONS = {"supports", "counters", "extends", "questions"}
 COMPLETED_STATUSES = {"completed", "complete", "done"}
@@ -54,7 +54,7 @@ def _load_json(path: Path, errors: list[dict[str, Any]], label: str) -> Any:
     return None
 
 
-def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
+def validate_round_record(round_record: dict[str, Any], effective_policy: str | None = None) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
 
@@ -314,7 +314,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
             )
         )
 
-    errors.extend(validate_quality_block(round_record))
+    errors.extend(validate_quality_block(round_record, effective_policy))
 
     return {
         "ok": not errors,
@@ -329,7 +329,7 @@ def validate_round_record(round_record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def validate_round_file(path: Path) -> dict[str, Any]:
+def validate_round_file(path: Path, effective_policy: str | None = None) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
     data = _load_json(path, errors, str(path))
     if errors:
@@ -341,7 +341,7 @@ def validate_round_file(path: Path) -> dict[str, Any]:
             "warnings": [],
             "summary": {},
         }
-    result = validate_round_record(data)
+    result = validate_round_record(data, effective_policy)
     result["path"] = str(path)
     return result
 
@@ -382,9 +382,10 @@ def validate_discussion_dir(path: Path) -> dict[str, Any]:
     if not round_files:
         errors.append(_issue("missing_rounds", "rounds", "at least one committed round is required"))
 
+    effective_policy = effective_stress_policy(manifest)
     round_results = []
     for round_file in round_files:
-        round_result = validate_round_file(round_file)
+        round_result = validate_round_file(round_file, effective_policy=effective_policy)
         round_results.append(round_result)
         for issue in round_result["errors"]:
             nested = dict(issue)

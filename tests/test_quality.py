@@ -79,6 +79,15 @@ def test_validate_quality_block_inert_without_block() -> None:
     assert validate_quality_block(_round()) == []
 
 
+def test_validate_quality_block_recomputes_stress_required() -> None:
+    # auto + zero pre-stress challenge edges => stressRequired must be True; a stored
+    # False is a back-dated/forged decision, caught only once the policy is known.
+    rec = _round(messages=[{"id": "r1-msg-001", "type": "argument"}], graph=[])
+    rec["quality"] = {"stressRequired": False, "counterEdgeCount": 0, "positionShiftCount": 0, "stressTriggered": False}
+    assert "quality_stress_required_mismatch" not in {e["code"] for e in validate_quality_block(rec)}
+    assert "quality_stress_required_mismatch" in {e["code"] for e in validate_quality_block(rec, effective_policy="auto")}
+
+
 def test_quality_summary_surfaces_signal() -> None:
     rec = _round(graph=[{"from": "r1-msg-001", "to": "r1-msg-001", "relation": "questions"}], shifts=[{}])
     block = quality_summary(rec, {"stressPolicy": "auto"})
