@@ -29,7 +29,7 @@ a numbered plan here before implementation.
 | 007 | Runtime-owned `agentDescriptor` provenance for projected custom agents | P1 | M | — | DONE (v0.3.0; ADR 0001) |
 | 008 | Certify projected custom-agent fan-out (gate + fixture + topology docs) | P1 | M | 007 | DONE (v0.3.0; ADR 0001) |
 | 009 | `mode` × `stressPolicy`: disagreement signal + quality contract + `--require-stress` | P1 | M/L | 008; ADR 0002 | DONE (v0.3.x; ADR 0002) |
-| 010 | Claude adapter: `mode` × `stressPolicy` phase orchestration (ADR 0002 step 2) | P1 | M/L | 009 | DONE (Claude certified `--require-projection --require-stress` on a live stress smoke; release tag pending) |
+| 010 | Claude adapter: `mode` × `stressPolicy` phase orchestration (ADR 0002 step 2) | P1 | M/L | 009 | DONE (Claude certified `--require-projection --require-stress` on a live stress smoke; release held for Codex parity) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
