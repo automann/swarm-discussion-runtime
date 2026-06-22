@@ -12,6 +12,10 @@ planning time; `python3 -m pytest` does NOT work — pytest lives in `.venv`).
 Repo discipline: every executed plan appends a `PROGRESS.md` round entry
 (template at the top of that file) — each plan includes this as a step.
 
+Forward backlog: post-v0.3.0 issues, fixes, and 0.3.x / 0.4.x feature candidates are
+tracked in [`../ROADMAP-NEXT.md`](../ROADMAP-NEXT.md); a 0.4.x feature graduates into
+a numbered plan here before implementation.
+
 ## Execution order & status
 
 | Plan | Title | Priority | Effort | Depends on | Status |

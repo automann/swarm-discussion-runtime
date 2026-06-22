@@ -58,7 +58,8 @@ releases. See `docs/ADAPTER-SPEC.md`.
 ```text
 AGENTS.md                 agent operating contract for this incubator
 ARCHITECTURE.md           target model and responsibility split
-ROADMAP.md                staged implementation plan
+ROADMAP.md                staged implementation plan (phases 0-7, complete)
+ROADMAP-NEXT.md           forward backlog: post-v0.3.0 issues + 0.3.x/0.4.x
 PROGRESS.md               per-round roadmap alignment and drift review ledger
 ACCEPTANCE.md             proof points and falsifiers
 NON_GOALS.md              explicit exclusions

@@ -1,5 +1,10 @@
 # Roadmap
 
+> **Status:** phases 0–7 below are complete — the runtime shipped and both host
+> adapters certified on the v0.3.0 topology. The **forward** backlog (issues, fixes,
+> and 0.3.x / 0.4.x features found during testing) lives in
+> [`ROADMAP-NEXT.md`](ROADMAP-NEXT.md). This file is retained as the build history.
+
 ## Phase 0: Skeleton And Guardrails
 
 Goal: establish a clean incubator with hard boundaries.
