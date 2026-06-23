@@ -36,7 +36,7 @@ non-trivial, with evidence (a discussion id, validator code, file:line, or threa
 |----|------|------|-----|--------|---------|
 | B-1 | bug | runtime | high | **done** | `projection-manifest.json` mutation after evidence makes real runs fail `--require-projection` (plan 009 step 1) |
 | C-1 | chore | runtime / conformance | high | **done** | certification only runs on tidied smokes; add a real parent-finalized projected run (plan 009 step 1 + stress fixture) |
-| C-2 | chore | claude / codex | med | open | map the request to a protocol mode tier instead of free-text (`"normal"`) |
+| C-2 | chore | claude / codex | med | **done** | map the request to a protocol mode tier instead of free-text — both adapter skills now map to `lightweight\|standard\|deep` (plan 010 + Codex step 2); both v0.4.0 stress smokes ran `deep`. (Runtime alias-vs-reject for non-tier strings stays parked below.) |
 | C-3 | chore | codex | low | open | prefer `@mention` expert invocation over explicit spawn (contract-preferred) |
 | C-4 | doc | runtime / claude / codex / aggregator | low | open | Modes table duplicated across READMEs — keep in sync or dedupe |
 
