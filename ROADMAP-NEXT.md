@@ -66,7 +66,7 @@ to `lightweight | standard | deep` (default `standard`) and pass it to `init --m
 
 | ID | Type | Lane | Sev | Status | Summary |
 |----|------|------|-----|--------|---------|
-| F-1 | feat | runtime / codex / claude | high | **in-progress** | `mode` × `stressPolicy`: coordinator runs the full PROTOCOL.md debate (enforced anti-consensus) — runtime landed (plan 009); **Claude adapter certified** on a live deep+required stress smoke (plan 010); Codex adapter remains |
+| F-1 | feat | runtime / codex / claude | high | **done** | `mode` × `stressPolicy`: coordinator runs the full PROTOCOL.md debate (enforced anti-consensus) — runtime (plan 009) + both adapters certified `--require-projection --require-stress` on live/retained stress smokes (plan 010); **released v0.4.0** across both adapters + the aggregator |
 | F-2 | feat | runtime | high | **done** | runtime disagreement signal (counter-edges, `genuineDisagreement`, `stressTriggered`) — powers `stressPolicy: auto` + certifies quality (plan 009) |
 | F-3 | feat | runtime | low | parking | advisory alignment-check / drift-score phase (founding "periodic alignment") |
 | F-4 | feat | runtime / adapters | med | parking | old-vs-new cost/quality benchmark (now unblocked: plan 004 done) |
