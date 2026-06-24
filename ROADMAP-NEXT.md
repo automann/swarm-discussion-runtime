@@ -167,3 +167,18 @@ with real-run data.)*
   (*needs-attention*): added a pre-synthesis `stress-check` decision so `auto` acts
   *before* synthesis (not post-hoc), required a stress *response* whenever stress is
   triggered, and replaced B-1's lost manifest freshness with a terminal-cleanup gate.
+- 2026-06-23 — implemented plan 009 (runtime quality contract + `--require-stress`,
+  non-forgeable on the `auto`/response paths) and plan 010 (Claude adapter bounded-loop
+  orchestration), each hardened through Codex adversarial-review rounds; Claude adapter
+  certified `--require-projection --require-stress` on a live `claude --bg` deep+required
+  stress smoke (`swarm-discussion-claude/smoke/discussions/stress-bg-smoke`).
+- 2026-06-24 — released **v0.4.0**: Codex adapter certified at parity (same runtime
+  `c843931`); both adapters + the aggregator tagged `v0.4.0`. Documented `stressPolicy`
+  and the combined `mode` × `stressPolicy` usage guide across the three READMEs, and added
+  explicit `--mode`/`--stressPolicy` flag honoring to both adapter skills. Closes F-1, F-2,
+  B-1, C-1, C-2.
+- 2026-06-24 — live-verified the flag honoring: two non-default parent probes
+  (`--mode deep --stressPolicy off`, `--mode lightweight --stressPolicy required`) resolved
+  the explicit flags over the mode-derived defaults and wrote manifests matching the flags
+  (`off` under deep, `required` under lightweight) — proving the parent honors the invocation,
+  not just inference.
